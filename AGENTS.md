@@ -47,8 +47,8 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | # | Stage | Status |
 |---|-------|--------|
 | 0 | Bootstrap: REQUIREMENT.md, AGENTS.md, CLAUDE.md, initial commit | ✅ done |
-| 1 | Requirements Q&A: until the requirements are clear | 🔄 **in progress** |
-| 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | ⏳ |
+| 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25); details continue in the chunk plans |
+| 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | 🔄 **draft in `.plans/01-super-plan.md`, awaiting approval** |
 | 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | ⏳ |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
@@ -65,12 +65,36 @@ Rules:
 | D1 | The repo is `~/projects/ofzza/tsshowcase` | It already existed as an empty git repo; the branch is `master` |
 | D2 | `verify` **returns a list of issues** instead of throwing | Return shape is roughly `{ ignored } \| { issues: [{ severity: error\|warning, message, file? }] }`. The report can then show every issue per directory |
 | D3 | **The rendering module is responsible for running tests** and returns a test hierarchy plus outcomes, in a shape the interface defines | The CLI repo provides **prepackaged test runners** (Vitest-compatible first) that modules can reuse |
-| D4 | Bundler ownership: user leans towards **"CLI owns Vite"**, but this is **not final** | Under sidebar discussion; see open question Q-BUILD |
+| D4 | **The CLI owns Vite**; modules contribute config | A module provides its framework plugins, app entry and runtime deps (e.g. a `getViteConfig(context)` method). An optional module `build()` override may be added later as an escape hatch. The showcased repo is never tied to Vite. Framework runtime packages (react, react-dom, …) **must resolve from the showcased repo**, while bundler plugins ship with the CLI/module |
+| D5 | "Publicly exported" units are found by **static entry analysis** | The module analyses the package entry (`package.json` `exports`, then `index.ts`) with the TS compiler API and follows re-exports back to their source directories. This replaces stdblox's string match. **Consequence:** verification needs a repo-wide analysis step (e.g. `analyze(repo)`, which produces exported units / context) *before* per-directory `verify(dir, context)` |
+| D6 | Configuration is an **optional config file plus CLI flags** | `tsshowcase.config.(ts\|js\|json)` holds the module, theme(s), module-specific options and output. CLI flags override the file |
+| D7 | Themes: **several per build, with a runtime switcher** | The default follows `prefers-color-scheme`. The theme system defines a switcher class/slot that modules render |
+
+| D8 | **Failing tests never block `build`** | Failures are shown per unit in the showcase. A `--fail-on-test-failure` flag gives strict mode (CI) |
+| D9 | **How module/theme references resolve, in order:** (1) the name of a module/theme bundled with the CLI, (2) an installed npm package name, (3) a filesystem path | JS and TS are both allowed. TS is loaded at runtime with a loader (e.g. jiti), so custom module authors need no build step |
+| D10 | **Adopt the stdblox code conventions** | Prettier `printWidth: 160`; British spelling; file header comments; JSDoc everywhere; `_` prefix for internals; `// #region` blocks; a purpose comment opening every `describe` |
+| D11 | **Validation uses in-repo fixtures only** | Do not touch stdblox-react for now |
+| D12 | **Licence file:** found case-insensitively as `LICEN[CS]E` with an optional `.md`/`.txt` extension, for each package in workspaces | Confirmed |
+| D13 | **Contract versioning uses a semver range declared in code** | Every module, theme and test runner declares `static readonly apiVersion = '^1.2'`.<br>• **The interface has its own version**, independent of the CLI package version, plus an **interface changelog** ("added in 1.3: …"). It is exported as `IMPLEMENTED_API_VERSION`.<br>• The CLI checks `semver.satisfies(IMPLEMENTED_API_VERSION, apiVersion)` at load time and fails with a clear message.<br>• **Within a major version, changes are additive only.** Methods added after 1.0 are optional and feature-detected; modules ignore fields they don't know.<br>• The types package is versioned in step with the interface.<br>• **Rejected:** requiring a `package.json` with a peerDependency on the interface package for path-loaded modules |
+
+| D14 | **This repo is an npm workspaces monorepo** | Separate packages: core CLI plus interface types, the React rendering module, themes, and the Vitest test runner. The CLI depends on the built-in packages so that lookup by name works (D9) |
+| D15 | **Naming:** `@ofzza/tsshowcase` (the CLI, binary `tsshowcase`), with siblings `@ofzza/tsshowcase-<thing>` | e.g. `@ofzza/tsshowcase-react`, `@ofzza/tsshowcase-theme-default`, `@ofzza/tsshowcase-vitest` (exact names to be settled in the super-plan) |
+| D16 | **v1 scope adds:** a `dev` action (Vite watch + HMR); an `init`/scaffold action (generate the stubs a module requires); **workspace (monorepo) showcased repos**; a machine-readable check report (`--format json`, non-zero exit on errors) | **Interface consequences:**<br>• the module needs a scaffold method;<br>• the input model must be multi-package from day one (a single-package repo = one package);<br>• `dev` needs a test strategy |
+| D17 | **Node >= 20, ESM only** | |
+
+| D18 | **In `dev`, tests run in watch mode** | Results are pushed live to the open showcase through the Vite dev server, so the test-runner interface must support watch and streamed updates |
+| D19 | **Showcase hierarchy for workspaces:** repo README (home) → each package (its README and licence) → that package's units | The package level collapses for a single-package repo |
+| D20 | **Layout variants are separate rendering modules** (e.g. React "pages" vs React "single-page") | They share a common React base (verification, embedding, helpers), probably as a shared package or a base class |
+| D21 | **React verification:** base rules by default, opt-in rule presets | Base rules: own directory, README, test, showcase, exported from the entry. The stdblox headless pattern (`useX`/`renderX`/`X`) is an opt-in preset |
+
+| D22 | **Only the React "pages" module ships in v1** | The shared React base is designed so a "single-page" module is cheap to add next |
+| D23 | **The CLI pre-renders markdown to HTML** | Output carries the documented theme classes, heading ids and rewritten links. Modules receive both the raw markdown and the HTML |
+| D24 | **How repo-file links are rewritten:** the host (GitHub/GitLab/Bitbucket) is detected from `package.json` `repository` and the default branch from git; a configurable URL template overrides both | Links to unit READMEs become showcase routes |
+| D25 | **Interactive playground is out of v1 scope** | The interface should leave room for it later |
 
 ## 4. Open questions
 
-- **Q-BUILD**: who owns the bundler for `build`? The user leans towards "CLI owns Vite" and asked why that would tie future frameworks to Vite. The distinction under discussion: the *showcased repo* is never tied to a bundler. The question is only whether *rendering modules inside the CLI* (e.g. a future Angular module) must express their build as a Vite configuration.
-- Not yet asked: how "publicly exported" is detected; config file vs CLI args; how custom modules and themes are loaded (JS only, or TS too); how themes are packaged and whether light/dark switches at runtime; dev/watch mode; licence filename variants; monorepo support; interface versioning; code style conventions; whether stdblox-react becomes the first consumer/fixture; package name and publishing.
+- None blocking. Detailed interface, theme and runner design happens in the respective chunk plans.
 
 ## 5. Prior art — stdblox-react findings
 

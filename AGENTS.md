@@ -91,8 +91,8 @@ Rules:
 | D23 | **The CLI pre-renders markdown to HTML** | Output carries the documented theme classes, heading ids and rewritten links. Modules receive both the raw markdown and the HTML |
 | D24 | **How repo-file links are rewritten:** the host (GitHub/GitLab/Bitbucket) is detected from `package.json` `repository` and the default branch from git; a configurable URL template overrides both | Links to unit READMEs become showcase routes |
 | D25 | **Interactive playground is out of v1 scope** | The interface should leave room for it later |
-| D26 | **The React base ships as a separate package from v1:** `@ofzza/tsshowcase-module-react-base` | **Base:** layout-agnostic Node-side parts (analysis, rules, scaffolding, Vite contribution, runner wiring) and runtime building blocks. It is not a loadable module.<br>**Default module:** layout only (shell, nav, routes, page composition). The user chose this over the recommended internal split |
-| D27 | **Naming scheme `@ofzza/tsshowcase-<kind>-<name>`:**<br>• `-module-react-default` (built-in name `react-default`; renames "react-pages");<br>• `-theme-default` (`default-light`, `default-dark`);<br>• `-runner-vitest` (`vitest`);<br>• `-module-react-base`;<br>• `-api` | "single-page vs pages" was only an example of why several modules might exist, not a v1 requirement |
+| D26 | **The React base ships as a separate package from v1:** `@ofzza/tsshowcase-base-react` | **Base:** layout-agnostic Node-side parts (analysis, rules, scaffolding, Vite contribution, runner wiring) and runtime building blocks. It is not a loadable module.<br>**Default module:** layout only (shell, nav, routes, page composition). The user chose this over the recommended internal split |
+| D27 | **Naming scheme `@ofzza/tsshowcase-<kind>-<name>`:**<br>• `-module-react-default` (built-in name `react-default`; renames "react-pages");<br>• `-theme-default` (`default-light`, `default-dark`);<br>• `-runner-vitest` (`vitest`);<br>• `-base-react`;<br>• `-api` | "single-page vs pages" was only an example of why several modules might exist, not a v1 requirement |
 
 ## 4. Open questions
 

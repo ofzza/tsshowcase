@@ -78,19 +78,21 @@ Rules:
 | D13 | **Contract versioning uses a semver range declared in code** | Every module, theme and test runner declares `static readonly apiVersion = '^1.2'`.<br>• **The interface has its own version**, independent of the CLI package version, plus an **interface changelog** ("added in 1.3: …"). It is exported as `IMPLEMENTED_API_VERSION`.<br>• The CLI checks `semver.satisfies(IMPLEMENTED_API_VERSION, apiVersion)` at load time and fails with a clear message.<br>• **Within a major version, changes are additive only.** Methods added after 1.0 are optional and feature-detected; modules ignore fields they don't know.<br>• The types package is versioned in step with the interface.<br>• **Rejected:** requiring a `package.json` with a peerDependency on the interface package for path-loaded modules |
 
 | D14 | **This repo is an npm workspaces monorepo** | Separate packages: core CLI plus interface types, the React rendering module, themes, and the Vitest test runner. The CLI depends on the built-in packages so that lookup by name works (D9) |
-| D15 | **Naming:** `@ofzza/tsshowcase` (the CLI, binary `tsshowcase`), with siblings `@ofzza/tsshowcase-<thing>` | e.g. `@ofzza/tsshowcase-react`, `@ofzza/tsshowcase-theme-default`, `@ofzza/tsshowcase-vitest` (exact names to be settled in the super-plan) |
+| D15 | **Naming:** `@ofzza/tsshowcase` (the CLI, binary `tsshowcase`), with siblings `@ofzza/tsshowcase-<kind>-<name>` | See D27 for the full scheme |
 | D16 | **v1 scope adds:** a `dev` action (Vite watch + HMR); an `init`/scaffold action (generate the stubs a module requires); **workspace (monorepo) showcased repos**; a machine-readable check report (`--format json`, non-zero exit on errors) | **Interface consequences:**<br>• the module needs a scaffold method;<br>• the input model must be multi-package from day one (a single-package repo = one package);<br>• `dev` needs a test strategy |
 | D17 | **Node >= 20, ESM only** | |
 
 | D18 | **In `dev`, tests run in watch mode** | Results are pushed live to the open showcase through the Vite dev server, so the test-runner interface must support watch and streamed updates |
 | D19 | **Showcase hierarchy for workspaces:** repo README (home) → each package (its README and licence) → that package's units | The package level collapses for a single-package repo |
-| D20 | **Layout variants are separate rendering modules** (e.g. React "pages" vs React "single-page") | They share a common React base (verification, embedding, helpers), probably as a shared package or a base class |
+| D20 | **Layout variants are separate rendering modules** (e.g. a React per-page module vs a React single-page module) | They share a common React base (verification, embedding, helpers), probably as a shared package or a base class |
 | D21 | **React verification:** base rules by default, opt-in rule presets | Base rules: own directory, README, test, showcase, exported from the entry. The stdblox headless pattern (`useX`/`renderX`/`X`) is an opt-in preset |
 
-| D22 | **Only the React "pages" module ships in v1** | The shared React base is designed so a "single-page" module is cheap to add next |
+| D22 | **Only the React default module (`react-default`, D27) ships in v1** | The shared base (D26) makes further React modules cheap to add |
 | D23 | **The CLI pre-renders markdown to HTML** | Output carries the documented theme classes, heading ids and rewritten links. Modules receive both the raw markdown and the HTML |
 | D24 | **How repo-file links are rewritten:** the host (GitHub/GitLab/Bitbucket) is detected from `package.json` `repository` and the default branch from git; a configurable URL template overrides both | Links to unit READMEs become showcase routes |
 | D25 | **Interactive playground is out of v1 scope** | The interface should leave room for it later |
+| D26 | **The React base ships as a separate package from v1:** `@ofzza/tsshowcase-module-react-base` | **Base:** layout-agnostic Node-side parts (analysis, rules, scaffolding, Vite contribution, runner wiring) and runtime building blocks. It is not a loadable module.<br>**Default module:** layout only (shell, nav, routes, page composition). The user chose this over the recommended internal split |
+| D27 | **Naming scheme `@ofzza/tsshowcase-<kind>-<name>`:**<br>• `-module-react-default` (built-in name `react-default`; renames "react-pages");<br>• `-theme-default` (`default-light`, `default-dark`);<br>• `-runner-vitest` (`vitest`);<br>• `-module-react-base`;<br>• `-api` | "single-page vs pages" was only an example of why several modules might exist, not a v1 requirement |
 
 ## 4. Open questions
 

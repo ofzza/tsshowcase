@@ -96,10 +96,12 @@ Rules:
 | D28 | **The theme catalogue lives in `-api` as importable typed constants** | Every class name and CSS variable name. Modules import the constants and never hardcode strings. C3 designs the hierarchy and implements the default themes |
 | D29 | **Implementation order builds the "inputs" first** (`check`/`init` slice: C1→C2→C4→C6→C8→C9) | Lock down the inputs (scanning, analysis, data model) before moulding them into a themed showcase app |
 | D30 | **The former C12 is split** into C12 (E2E acceptance), C13 (docs) and C14 (release) | Release scope is still being discussed |
+| D31 | **Packages are versioned independently, with changesets** | The interface version (D13) stays separate from package versions |
+| D32 | **Basic CI from C1** (lint, type-check, test, build on push/PR) | C14 extends it |
+| D33 | **C14 scope:** CI extensions (Node matrix, E2E), pack-and-install smoke test, a **manual publish shell script** (dependency order, dry-run; no automated publish workflow for now), and a dogfood docs site on GitHub Pages | |
 
 ## 4. Open questions
 
-- Scope of C14 Release (versioning strategy, CI, publishing, dogfooding the docs site).
 - Detailed interface, theme and runner design happens in the respective chunk plans.
 
 ## 5. Prior art — stdblox-react findings

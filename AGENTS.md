@@ -93,10 +93,14 @@ Rules:
 | D25 | **Interactive playground is out of v1 scope** | The interface should leave room for it later |
 | D26 | **The React base ships as a separate package from v1:** `@ofzza/tsshowcase-base-react` | **Base:** layout-agnostic Node-side parts (analysis, rules, scaffolding, Vite contribution, runner wiring) and runtime building blocks. It is not a loadable module.<br>**Default module:** layout only (shell, nav, routes, page composition). The user chose this over the recommended internal split |
 | D27 | **Naming scheme `@ofzza/tsshowcase-<kind>-<name>`:**<br>• `-module-react-default` (built-in name `react-default`; renames "react-pages");<br>• `-theme-default` (`default-light`, `default-dark`);<br>• `-runner-vitest` (`vitest`);<br>• `-base-react`;<br>• `-api` | "single-page vs pages" was only an example of why several modules might exist, not a v1 requirement |
+| D28 | **The theme catalogue lives in `-api` as importable typed constants** | Every class name and CSS variable name. Modules import the constants and never hardcode strings. C3 designs the hierarchy and implements the default themes |
+| D29 | **Implementation order builds the "inputs" first** (`check`/`init` slice: C1→C2→C4→C6→C8→C9) | Lock down the inputs (scanning, analysis, data model) before moulding them into a themed showcase app |
+| D30 | **The former C12 is split** into C12 (E2E acceptance), C13 (docs) and C14 (release) | Release scope is still being discussed |
 
 ## 4. Open questions
 
-- None blocking. Detailed interface, theme and runner design happens in the respective chunk plans.
+- Scope of C14 Release (versioning strategy, CI, publishing, dogfooding the docs site).
+- Detailed interface, theme and runner design happens in the respective chunk plans.
 
 ## 5. Prior art — stdblox-react findings
 

@@ -32,6 +32,7 @@ Extract the showcase/enforcement idea from `~/projects/ofzza/blox-fluentui-react
      - a component hierarchy, with for each unit: its README contents, its tests and their status, and the path to its showcase page;
     - *Changed by D3:* the **module** produces the tests and their status (using a prepackaged runner); the CLI does not;
     - *Changed by D37/D38:* showcases are required per unit kind (decided by the module), and tests are optional for type-only units;
+    - *Changed by D40:* `verify` gets lazy, cached file accessors rather than eager contents;
      - room to extend later.
    - Modules also expose a **verification** method. It receives every non-ignored subdirectory together with its file list and file contents. It decides whether to ignore the directory and, if not, whether the directory meets the module's requirements.
    - The CLI repo ships built-in modules (a React module for TS/React first). The user can pick a built-in module or point to a custom one by path.
@@ -106,6 +107,9 @@ Rules:
 | D36 | **A unit is a directory exporting one or more public symbols. Nesting is allowed** (a unit may contain sub-units) | Intermediate non-unit directories become menu levels |
 | D37 | **Requirement change: README and tests are mandatory for every unit; showcases are mandatory per kind, as the module decides** | `react-default`: required for components and hooks; optional for functions, classes and constants; not applicable to type-only units. Severity can be overridden via rule IDs (D21). The showcase path is optional in the data model, and layouts must handle its absence. Pure-TS libraries therefore need no React unless they opt into showcases |
 | D38 | **Type-only units require only a README** | Tests are optional; type tests (`expectTypeOf`, `*.test-d.ts`) are shown if present. Exception to D37's "tests mandatory" |
+| D39 | **Syntax highlighting is kept, class-based only** | Done at build time in the CLI markdown pipeline (e.g. Shiki with a CSS-variables theme, or Prism/highlight.js classes). Token colours are catalogue variables; no inline colours |
+| D40 | **`verify` receives the file list plus lazy, cached `read(file)` accessors** instead of eager contents | Requirement change: semantically equivalent, but only files the module needs are read, and the CLI can track reads for `dev` invalidation |
+| D41 | **This repo dogfoods its own convention from C1** | Every exported unit in this repo's packages has its own dir, README and tests, with showcases per D37 (the `-base-react` components need them). `tsshowcase check` runs on this repo in CI once C9 lands. C14 only adds the GitHub Pages deploy |
 
 ## 4. Open questions
 

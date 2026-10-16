@@ -30,6 +30,8 @@ Extract the showcase/enforcement idea from `~/projects/ofzza/blox-fluentui-react
      - the licence file contents;
      - the root `README.md`;
      - a component hierarchy, with for each unit: its README contents, its tests and their status, and the path to its showcase page;
+    - *Changed by D3:* the **module** produces the tests and their status (using a prepackaged runner); the CLI does not;
+    - *Changed by D37/D38:* showcases are required per unit kind (decided by the module), and tests are optional for type-only units;
      - room to extend later.
    - Modules also expose a **verification** method. It receives every non-ignored subdirectory together with its file list and file contents. It decides whether to ignore the directory and, if not, whether the directory meets the module's requirements.
    - The CLI repo ships built-in modules (a React module for TS/React first). The user can pick a built-in module or point to a custom one by path.
@@ -47,8 +49,8 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | # | Stage | Status |
 |---|-------|--------|
 | 0 | Bootstrap: REQUIREMENT.md, AGENTS.md, CLAUDE.md, initial commit | ✅ done |
-| 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25); details continue in the chunk plans |
-| 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | 🔄 **draft in `.plans/01-super-plan.md`, awaiting approval** |
+| 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25). D26–D33 were decided during super-planning; details continue in the chunk plans |
+| 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | 🔄 **draft in `.plans/01-super-plan.md`. A fresh-eyes review (`.plans/01a-super-plan-review.md`) has been triaged; review questions are open** |
 | 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | ⏳ |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
@@ -96,9 +98,14 @@ Rules:
 | D28 | **The theme catalogue lives in `-api` as importable typed constants** | Every class name and CSS variable name. Modules import the constants and never hardcode strings. C3 designs the hierarchy and implements the default themes |
 | D29 | **Implementation order builds the "inputs" first** (`check`/`init` slice: C1→C2→C4→C6→C8→C9) | Lock down the inputs (scanning, analysis, data model) before moulding them into a themed showcase app |
 | D30 | **The former C12 is split** into C12 (E2E acceptance), C13 (docs) and C14 (release) | Release scope is still being discussed |
-| D31 | **Packages are versioned independently, with changesets** | The interface version (D13) stays separate from package versions |
+| D31 | **Packages are versioned independently, with changesets** | Clarifies D13: **the `-api` package version *is* the interface version** (`IMPLEMENTED_API_VERSION` is derived from it), and changesets bumps it like any other package. "Independent" means the other packages' versions don't follow it |
 | D32 | **Basic CI from C1** (lint, type-check, test, build on push/PR) | C14 extends it |
 | D33 | **C14 scope:** CI extensions (Node matrix, E2E), pack-and-install smoke test, a **manual publish shell script** (dependency order, dry-run; no automated publish workflow for now), and a dogfood docs site on GitHub Pages | |
+| D34 | **Test ownership: the module's `runTests()` calls a runner library.** The runner is chosen through a **module option** (e.g. `runner: 'vitest'`) | The CLI resolves runner references (built-in name → npm → path, D9) on the module's behalf, but never calls a runner itself. Refines D3 |
+| D35 | **Routes: the module exposes `resolveRoute(target, heading?)`** | `target` is home, a package or a unit. The CLI's markdown renderer (D23) calls it to rewrite README file links into final in-app URLs. Links to non-README repo files go to the VCS host (D24) |
+| D36 | **A unit is a directory exporting one or more public symbols. Nesting is allowed** (a unit may contain sub-units) | Intermediate non-unit directories become menu levels |
+| D37 | **Requirement change: README and tests are mandatory for every unit; showcases are mandatory per kind, as the module decides** | `react-default`: required for components and hooks; optional for functions, classes and constants; not applicable to type-only units. Severity can be overridden via rule IDs (D21). The showcase path is optional in the data model, and layouts must handle its absence. Pure-TS libraries therefore need no React unless they opt into showcases |
+| D38 | **Type-only units require only a README** | Tests are optional; type tests (`expectTypeOf`, `*.test-d.ts`) are shown if present. Exception to D37's "tests mandatory" |
 
 ## 4. Open questions
 

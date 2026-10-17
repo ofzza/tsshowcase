@@ -55,6 +55,44 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔜 next: **C1 (Monorepo foundation)**, wave P1 |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
+### How to resume (fresh session)
+
+1. Read this file, then `.plans/01-super-plan.md` (chunk definitions, dependencies, planning and implementation order), and `.plans/01a-super-plan-review.md` (the **"Deferred to chunk plans"** list: open points to raise when planning each chunk).
+2. Find the next step in the stage table above.
+3. **Chunk planning loop** (stage 3):
+   - draft `.plans/chunk-NN-<slug>.md`;
+   - raise the open points for that chunk and ask questions (any number of rounds);
+   - iterate until the user explicitly approves;
+   - record new decisions here as `D<n>`;
+   - mark the chunk approved in the chunk-plan tracker below;
+   - commit.
+4. **Implementation loop** (stage 4, only after *all* chunk plans are approved):
+   - implement one chunk;
+   - explain it to the user and wait for their review before moving on;
+   - commit.
+5. Backtracking to any earlier plan is always allowed. Record it here, update the affected plans, and get re-approval.
+6. `REQUIREMENT.md` is the user's verbatim original request, and the source of truth for the process expectations.
+
+### Chunk-plan tracker
+
+| Chunk | Plan file | Status |
+|-------|-----------|--------|
+| C1 Monorepo foundation | – | 🔜 next |
+| C2 Plugin contracts | – | ⏳ (stays open until C3 is approved) |
+| C3 Theme system | – | ⏳ |
+| C4 Repo scanning | – | ⏳ |
+| C5 Markdown pipeline | – | ⏳ |
+| C6 Plugin loading + config | – | ⏳ |
+| C7 Vitest runner | – | ⏳ |
+| C15 Vite helper | – | ⏳ |
+| C8 React base (Node) | – | ⏳ |
+| C9 CLI check + init | – | ⏳ |
+| C10 React runtime + default module | – | ⏳ |
+| C11 CLI build + dev | – | ⏳ |
+| C12 E2E | – | ⏳ |
+| C13 Docs | – | ⏳ |
+| C14 Release | – | ⏳ |
+
 Rules:
 - After every completed stage step (a plan is approved, or a chunk is implemented), save the plan to `.plans/` and **commit all changes**.
 - Plan file naming: `.plans/00-bootstrap.md`, `.plans/01-super-plan.md`, `.plans/chunk-NN-<slug>.md`.

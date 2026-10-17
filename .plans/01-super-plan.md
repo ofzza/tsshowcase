@@ -1,6 +1,15 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
+
+## Revisions
+
+- **R1 (during C2 planning, from the C2 review `02a-c2-plan-review.md`, F37–F40):** text brought in line with decisions made after the super-plan's approval, plus chunk duties nobody owned.
+  - C1: Node floor `>=22.12` (D49), CI matrix `[22, 24]` from C1 (D54).
+  - C2: `showcases[]` (D61); only `analyze` required (D63); context-object signatures; module options as JSON Schema (D58); repo-level verification is `analyze` returning issues; `build` returns files (D64); config moved out (D66).
+  - C5: `Doc.headings`. C6: per-package config files (D59). C11: the D64 write duties. C14: CI adds Node 26 (D54).
+  - Added after the C2 group B decisions: `resolveRoute(target, ctx, heading?)` and routes in the data (D67); `reportTestUpdate` (C10); `init <dir>` (C9); plain-text docs and link mapping in C5 (D71, D73); merged per-package options in C6 (D69).
+  - After the remaining C2 decisions: data embedding is the module's business (D77, C2 bullet updated); `check` is a prerequisite of `build`/`dev` (D76, C11); `loadTestRunner` candidates (D74, C6); module-defined CLI flags (D79, C6/C9); group READMEs (D78, C11); versioning from `0.1.0` (D80: C1 amendment A2, C14).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -10,7 +19,7 @@
 | `@ofzza/tsshowcase`                      | The CLI (binary `tsshowcase`): repo scanning, markdown pipeline, plugin loading, config, data assembly, `dev` file watching, and the `check` / `build` / `dev` / `init` actions. It doesn't bundle anything itself; modules build (D43). Depends on the built-in packages so they can be looked up by name (D9).                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `@ofzza/tsshowcase-theme-default`        | Default themes: built-in names `default-light` and `default-dark`. Also holds the reference documentation for the theme catalogue.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `@ofzza/tsshowcase-testrunner-vitest`    | Prepackaged Vitest test runner (D3), with run and watch modes. Built-in name: `vitest`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `@ofzza/tsshowcase-base-vite`            | Reusable Vite pipeline helper (D43). Not a loadable module. Handles: data embedding as a virtual module, theme CSS inclusion and switcher setup, `base: './'`, output dir, dev server, HMR and the live update channel. Modules call it with their framework plugins and app entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `@ofzza/tsshowcase-base-vite`            | Reusable Vite pipeline helper (D43). Not a loadable module. Handles: data embedding as a virtual module, theme CSS inclusion and switcher setup, `base: './'`, in-memory build output (returned as files for the CLI to write, D64), dev server, HMR and the live update channel. Modules call it with their framework plugins and app entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `@ofzza/tsshowcase-base-react`           | Shared React base (D20, D26, D48). Layout-agnostic and **not itself a loadable module**. Two halves:<br>• **check/init (Node, no bundler):** static entry analysis, base rules and the `headless` preset, scaffold templates;<br>• **build/dev:** a **React wrapper around `-base-vite`** (plugin-react, React deduped from the showcased repo, tsconfig paths) plus the runtime building blocks (data and live-channel access, README HTML renderer, showcase embed, test-results view, theme switcher, hash router).<br>Exposes a **base module class** with analyze / verify / scaffold / runTests / build / dev already implemented. Layout modules extend it and supply only their app entry and layout. Depends on `-base-vite`. |
 | `@ofzza/tsshowcase-module-react-default` | The v1 rendering module (D22). Built-in name: `react-default`. Contains **layout only**: app shell, navigation tree (repo → packages → units), route scheme, and the home/package/unit pages composed from the base building blocks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
@@ -23,10 +32,10 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Goal:** an empty but fully wired workspace.
 - **Requirements:**
   - npm workspaces with the package skeletons listed above.
-  - TS (ESM, Node ≥ 20, D17), build via `tsc` project references.
+  - TS (ESM, Node `>=22.12`, D17/D49), build via `tsc` project references.
   - Prettier (160), ESLint, Vitest workspace config, `npm run ci` aggregate script.
   - A `fixtures/` directory convention. Fixtures are **isolated from the workspace**: excluded from `workspaces`, from root lint/test/type-check, and from dependency hoisting (each fixture has its own install where it needs `react`/`vitest`). Otherwise "resolve React from the showcased repo" can't be tested.
-  - **Basic CI (D32):** a GitHub Actions workflow that runs lint, type-check, test and build on push/PR, so every chunk is checked.
+  - **Basic CI (D32):** a GitHub Actions workflow that runs lint, type-check, test and build on push/PR on a Node `[22, 24]` matrix (D54), so every chunk is checked.
   - changesets set up for independent versioning (D31).
   - The D10 conventions documented in AGENTS.md.
   - **Dogfooding (D41):** the package skeletons follow the unit convention (a dir per exported unit, README, tests, showcases per D37).
@@ -40,26 +49,24 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - repo info (root, VCS host, branch);
     - packages[] (D16, D19), each with: package info (sourced from package.json in v1, but source-agnostic so other repo types can come later), licence (D12), README raw and HTML (D23), unit hierarchy;
     - how the repo root README/licence relate to package READMEs/licences, including the single-package collapse (no duplicated README on home and package page);
-    - per unit (a directory exporting 1+ symbols; nesting allowed, D36, so a unit can be both a page and a parent of sub-units): kind, exported symbols, README raw/HTML, tests (hierarchy plus outcomes), **optional** showcase entry path (D37);
+    - per unit (a directory exporting 1+ symbols; nesting allowed, D36, so a unit can be both a page and a parent of sub-units): kind, exported symbols, README raw/HTML, tests (hierarchy plus outcomes), a possibly empty list of showcase entries (D37, D61);
     - extensible: additive only (D13).
-  - **Rendering module interface** (default-exported class, D9 loading):
+  - **Rendering module interface** (default-exported class, D9 loading). Only `analyze` is required; every other method is optional and feature-detected per action (D63). Methods take context objects:
     - `apiVersion` (semver range, D13);
-    - `analyze(repo)` → exported units/context (D5);
-    - `verify(dir, context)` → `{ ignored } | { issues[] }` (D2), receiving the file list plus lazy, cached `read(file)` accessors (D40);
-    - `runTests(ctx)` (D3, D34, D42): the module calls `ctx.loadTestRunner(ref?)` (an explicit ref from config or the module default, otherwise auto-detection), runs or watches, maps the raw results to units, and returns them. In dev, test updates are pushed via `ctx.onTestUpdate` (D18);
-    - `resolveRoute(target, heading?)` (D35): the in-app URL for home, a package or a unit;
-    - `build(ctx)` and `dev(ctx)` (D43): the module builds the static app, or runs a dev server. `ctx` carries the assembled data, the resolved theme CSS files, the output dir and (in dev) `onDataUpdate` / `onTestUpdate` subscriptions;
-    - `scaffold(unit)` for `init` (D16);
-    - module-specific options schema (D6);
-    - room for a playground (D25).
-  - **Inclusion rules for any module's output** (D43): how the data is embedded, how theme CSS is included and scoped, how the switcher attribute works. Mandatory even for modules that don't use `-base-vite`.
+    - `analyze(ctx)` → exported units, plus repo-level issues (D5);
+    - `verify(dir, ctx)` → `{ ignored } | { issues[] }` (D2), receiving the file list plus lazy, cached accessors (D40);
+    - `runTests(ctx)` (D3, D34, D42): the module calls `ctx.loadTestRunner(ref?)` (an explicit ref from config or the module default, otherwise auto-detection), runs or watches, maps the raw results to units, and returns them. In dev, it keeps pushing test updates to the CLI through `ctx` (D18);
+    - `resolveRoute(target, ctx, heading?)` (D35, D67): the in-app URL for home, a package or a unit; the CLI stores routes in the data;
+    - `build(ctx)` and `dev(ctx)` (D43): the module builds the static app and returns it as files for the CLI to write (D64), or runs a dev server. `ctx` carries the assembled data, the resolved theme CSS files and (in dev) `onDataUpdate` / `onTestUpdate` subscriptions;
+    - `scaffold(ctx)` for `init` (D16): returns files for the CLI to write (D64);
+    - module-specific options schema, as JSON Schema (D6, D58);
+  - **Inclusion rules for any module's output** (D43): how theme CSS is included and scoped, how the switcher attribute works, static/relocatable output with no leaks. Mandatory even for modules that don't use `-base-vite`. How the data is embedded is the module's business (D77).
   - **Issue model:** severity, message, file, rule id.
   - **Test-runner interface:** `apiVersion`, `detect(repo)`, `run(options)`, `watch(options, onUpdate)`; a raw result hierarchy (file → suite → test, with status, duration and error); never throws on failing tests (D8, D42).
   - **Theme contract:** a theme manifest (`apiVersion`, name(s), CSS entry files, light/dark flags, D7).
   - **Theme catalogue constants (D28):** every documented CSS class name and CSS variable name, exported as typed constants that modules import. The _values_ and the _design_ of the hierarchy come from C3; C2 provides the slot and the export mechanism, and C3's plan fills it in (it extends `-api`).
-  - **Config file schema** (D6).
   - **Data handed to `build`/`dev`:** its shape, plus the dev update protocol (data changes and test updates, D18).
-  - **Repo-level verification:** issues not tied to one directory (e.g. an unresolvable entry, an export whose source is shared with other exports). Covered by a repo-level hook or by `analyze` returning issues.
+  - **Repo-level verification:** issues not tied to one directory (e.g. an unresolvable entry, an export whose source is shared with other exports), returned by `analyze`.
   - **Output tolerance:** the CLI tolerates unknown fields in module outputs (analysis results, issues, test results) as well as in inputs (D13).
   - Interface changelog started at 1.0.0.
 - **Depends on:** C1 (only for where the code lives; planning is independent).
@@ -78,7 +85,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Documented, `tss-`-prefixed class catalogue, including region classes (D44): layout shell, nav, headings, paragraphs, links, lists, tables, code (inline and block), blockquote, showcase frame and error, test-result list and status, theme switcher.
   - Covers the markdown HTML output (C5).
   - Runtime theme switching with a `prefers-color-scheme` default (D7). Persists the user's choice and avoids a flash of the wrong theme on load.
-  - **Theme scoping:** how several themes coexist in one bundle (e.g. `[data-theme=…]` scoping), and how a custom theme can extend a built-in one.
+  - **Theme scoping:** how several themes coexist in one bundle (e.g. `[data-theme=…]` scoping), and how a custom theme can extend a built-in one (by composition: theme CSS is unscoped and the build scopes it, D65).
   - **Three-tier scope (D44):**
     - variables are inherited everywhere, including showcases;
     - catalogue classes work on any element;
@@ -119,7 +126,10 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - unit README → in-app URL via the module's `resolveRoute` (D35);
     - repo file → host URL template (GitHub/GitLab/Bitbucket, overridable, D24);
     - external links left untouched;
-    - heading anchors (`#slug`, in-page or cross-README) rewritten via `resolveRoute(target, heading)` (D35), since bare `#slug` collides with hash routing.
+    - heading anchors (`#slug`, in-page or cross-README) rewritten via `resolveRoute(target, ctx, heading)` (D35, D67), since bare `#slug` collides with hash routing.
+  - Collects each document's headings (depth, text, id) for `Doc.headings` (C2).
+  - Plain-text docs (`LICENSE`, `.txt`; `Doc.format: 'text'`, D71) render as escaped `<pre>` with a catalogue class.
+  - Link-to-target mapping per D73 (a unit's README or directory → the unit, …, anything else → the VCS host).
   - Syntax highlighting for code blocks (D39), emitting only themable token classes, with no inline colours.
 - **Depends on:** C2, C3 (class names).
 
@@ -131,8 +141,11 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - TS loading via jiti.
   - Default-export class instantiation.
   - `apiVersion` semver check with clear errors (D13).
-  - `ctx.loadTestRunner(ref?)` helper: resolves an explicit ref, or auto-detects among candidate runners (D42).
-  - Config file discovery (`tsshowcase.config.ts|js|json`), validated against the C2 schema, merged with CLI flags (D6).
+  - `ctx.loadTestRunner(ref?, { candidates? })` helper: resolves an explicit ref, or auto-detects among candidate runners; throws on ambiguity, `undefined` when none (D42, D74).
+  - Module-defined CLI flags mapped onto option paths (`optionFlags`, D79): parsing from the schema, precedence over config, collisions, `--help`.
+  - The config schema (D6, D58, D59, D62), owned by the CLI package, not `-api` (D66): `config.schema.json` / `package-config.schema.json`, inferred types, `defineConfig`, documented in the CLI README. Design starting point: C2 plan §10.
+  - Config file discovery (`tsshowcase.config.ts|js|json`), validated against that schema, merged with CLI flags (D6).
+  - Per-package config files in workspace packages (D59): discovery (using C4's workspace detection), the restricted package schema, and merging over the root config; each package's merged `moduleOptions` validated against the module's `optionsSchema` and handed over as `PackageInput.options` (D69).
   - Validation of module options.
 - **Depends on:** C2.
 
@@ -176,7 +189,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - tree report of every non-ignored directory, with per-directory issues (human-readable, coloured);
     - `--format json`;
     - non-zero exit code on errors (D16).
-  - **`init <unit>`** calls the module's `scaffold` (and reports clearly when a module lacks it, per D13 feature detection).
+  - **`init <dir>`** calls the module's `scaffold` (and reports clearly when a module lacks it, per D13 feature detection).
   - **Self-check (D41):** `tsshowcase check` runs on this repo in CI.
 - **Depends on:** C4, C6, C8.
 
@@ -188,7 +201,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `@vitejs/plugin-react`;
     - react/react-dom **resolved and deduped from the showcased repo** (pitfall: duplicate React). The dedupe also covers module runtime files living in the CLI's `node_modules`, and the module's packages must not pull in their own React copy through peer auto-install;
     - respects the repo's tsconfig paths;
-  - **Base class `runTests`** (D42): `ctx.loadTestRunner` → run / watch → map raw results to units (by unit directory, incl. nested units, D36) → return / push via `ctx.onTestUpdate`.
+  - **Base class `runTests`** (D42): `ctx.loadTestRunner` → run / watch → map raw results to units (by unit directory, incl. nested units, D36) → return / push via `ctx.reportTestUpdate`.
   - **App:**
     - hash router;
     - nav tree (repo → packages → units, D19; nested units are both pages and parents, D36);
@@ -210,6 +223,9 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - output to `--out` (default `./showcase`);
     - **output guard:** refuse to write into a non-empty directory that tsshowcase didn't create (e.g. stdblox already has a `showcase/` source dir);
     - `--fail-on-test-failure` (D8); `--no-tests` (optional). The chunk plan decides whether "tests unavailable" (D42) also fails in strict mode, and whether test results are cached.
+  - **Writing the output (D64):** the module returns the site as files; the CLI validates the paths, checks the checkable inclusion rules, and writes `--out` with the output guard, an atomic swap and a marker file (details: C2 plan, "Recorded for later chunks").
+  - **`check` first (D76):** `build` and `dev` run the full `check` and print the report; errors fail `build` unless `--no-check` (config `check: false`); `dev` never fails on them.
+  - **Group READMEs (D78):** a `README.md` in a group directory becomes `GroupNode.readme`.
   - **`dev`:** the CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).
 - **Depends on:** C5, C6, C7, C9, C10.
 
@@ -217,9 +233,9 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** the reusable Vite build/dev pipeline that modules call (D43). Numbered C15 to avoid renumbering existing chunks.
 - **Requirements:**
-  - API: `build({ data, themes, outDir, plugins, entry, resolve… })` and `dev({ …, onDataUpdate, onTestUpdate })`.
+  - API: `build({ data, themes, plugins, entry, resolve… })` → files (`build.write: false`, D64) and `dev({ …, onDataUpdate, onTestUpdate })`.
   - Data embedding as a virtual module; theme CSS inclusion and scoping, plus the switcher setup (`[data-theme]`, `prefers-color-scheme` default, persisted choice, a no-flash init script in the HTML head), per the C2 inclusion rules and the C3 theme scoping.
-  - `base: './'`; output dir; `server.fs.allow` for module runtime files outside the repo root.
+  - `base: './'`; `server.fs.allow` for module runtime files outside the repo root.
   - Dev server, HMR, and pushing data and test updates to the browser (D18).
   - Framework-agnostic: no React knowledge.
 - **Depends on:** C2, C3.
@@ -246,7 +262,8 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** v1 publishable (D31–D33).
 - **Requirements:**
-  - **CI extended:** a Node version matrix (20/22/24); E2E (C12) in CI.
+  - **Versioning (D80):** the first publish is `0.1.0`; the PR changeset check is switched on after it; PUBLISH.md documents the `0.x` major-changeset gotcha; decide whether `0.x` releases use a `next` dist-tag.
+  - **CI extended:** Node 26 added to the `[22, 24]` matrix C1 already runs (D54); E2E (C12) in CI.
   - **Pack + install smoke test:** pack each package, install the tarballs into a scratch project, and run `check` and `build` there.
   - **Manual publish script** (no automated publish):
     - applies changesets versions;

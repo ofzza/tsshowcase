@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial correction (C2 review F42): A1's wording updated after D66 moved the config schemas to the CLI package; no change in scope. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -69,7 +69,7 @@ packages/<pkg>/
 
 **`package.json` fields:**
 
-- `name`, `version: 0.0.0`, `description`, `keywords`, `license`, `author`;
+- `name`, `version: 0.1.0` (A2, D80), `description`, `keywords`, `license`, `author`;
 - `repository` with `directory: packages/<pkg>`, plus `homepage` and `bugs`;
 - `type: module`, `engines.node: ">=22.12"` (D49; a deliberate _runtime_ floor, see §11), `sideEffects: false` (except where a later chunk needs CSS side effects);
 - `exports`: `{ ".": { "source": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./package.json": "./package.json" }`; `main` and `types` mirror it for older tooling (as the template);
@@ -78,7 +78,7 @@ packages/<pkg>/
 
 **The CLI package also gets** `bin: { "tsshowcase": "./dist/bin.js" }`, with a `src/bin.ts` stub that prints the version and "not implemented yet". It only prints when executed directly, never on import (the template's `import.meta.url` vs `process.argv[1]` guard), which keeps `sideEffects: false` truthful. C9 replaces it.
 
-**Internal dependencies are declared now**, following the super-plan package table. Ranges are `^0.0.0`, and changesets bumps them:
+**Internal dependencies are declared now**, following the super-plan package table. Ranges are `^0.1.0` (A2), and changesets bumps them:
 
 | Package                 | Depends on                                                                                                |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -268,7 +268,7 @@ The template relies on a trigger table and discipline. This repo will have dozen
 | `ci:links`: `remark-validate-links` over every Markdown file (offline; relative files and heading anchors).                                                                                                                                                                                           | Links broken by a rename, move or removed heading                           | **C1** |
 | Unit completeness (own dir, README, tests, showcase per kind): `tsshowcase check` on this repo (D41)                                                                                                                                                                                                  | A unit missing its README, tests or showcase                                | C9     |
 | Showcase smoke render: every `*.showcase.tsx` renders without throwing (stdblox's `showcases.test.tsx` pattern)                                                                                                                                                                                       | Showcases broken by an API change                                           | C10    |
-| PR changeset check: `changeset status --since=origin/develop` on pull requests that touch `packages/`                                                                                                                                                                                                 | Forgotten changesets                                                        | **C1** |
+| PR changeset check: `changeset status --since=origin/develop` on pull requests that touch `packages/`; **shipped disabled until the first publish** (A2, D80)                                                                                                                                                                                                 | Forgotten changesets                                                        | **C1** |
 
 What stays manual (and is said so in the trigger table's intro): whether README _prose_ and showcase _content_ still describe the behaviour accurately. Reviews and the purpose-comment rule cover these.
 
@@ -317,15 +317,24 @@ Contracts (C2), theme design and stylelint (C3), all runtime dependencies, React
 
 ## Amendment A1: JSON schemas with tsschema sidecars (D58, D62), re-approved
 
-Raised during C2 planning. Our JSON Schemas (the config schemas in `-api`, our modules' options schemas) are plain `*.schema.json` files typed through committed `@ofzza/tsschema` sidecars (`*.d.json.ts`). C1 wires the tooling so later chunks only add schema files:
+Raised during C2 planning. Our JSON Schemas (the config schemas in the CLI package (D66), our modules' options schemas) are plain `*.schema.json` files typed through committed `@ofzza/tsschema` sidecars (`*.d.json.ts`). C1 wires the tooling so later chunks only add schema files:
 
-- **Dependencies:** `@ofzza/tsschema` as a root devDependency (for the `tsschema` command). Packages that publish schema-derived types (`-api` from C2) add it as a regular dependency themselves.
+- **Dependencies:** `@ofzza/tsschema` as a root devDependency (for the `tsschema` command). Packages that publish schema-derived types (`-api` for `OptionsOf` from C2, the CLI for the config types from C6) add it as a regular dependency themselves.
 - **TypeScript:** `allowArbitraryExtensions` in `tsconfig.base.json` (so JSON imports pick up their sidecars); each package's `tsconfig.build.json` `include` adds `src/**/*.json` (with a sidecar present, `tsc` no longer copies the JSON on its own).
 - **Scripts:** `schemas` generates sidecars for `packages/*/src/**/*.schema.json`; `ci:schemas` runs it with `--check`, failing when a committed sidecar is stale. `build` = `schemas` → `tsc -b` → `scripts/copy-sidecars.mjs`. The `schemas` script must succeed when there are no schema files yet (C1 has none).
 - **`scripts/copy-sidecars.mjs`:** copies each `src/**/*.d.json.ts` to the matching path under `dist/`. **Why:** `tsc` never copies declaration files from source, and without the sidecar a consumer's types inferred from the JSON silently become `never` (verified by experiment with TS 6.0.3 during C2 planning). With the sidecar in `dist`, consumers need no tsconfig changes.
 - **Formatting and linting:** sidecars are generated and committed; `.prettierignore` and the ESLint ignores list `**/*.d.json.ts`.
 - **Docs:** AGENTS.md gains the gotcha ("sidecars don't reach `dist` on their own") and a trigger-table row: "changed a `*.schema.json`" → run `npm run schemas`, commit the sidecar, update the README documenting it.
 - **Acceptance (added):** 11. `npm run ci:schemas` passes with zero schema files; a throwaway `*.schema.json` gets a sidecar from `npm run schemas`, `ci:schemas` fails after editing the JSON without regenerating, and `npm run build` puts the sidecar into `dist`. Reverted afterwards.
+
+## Amendment A2: versioning from `0.1.0` (D80), re-approved
+
+Raised during C2 planning:
+
+- Every package skeleton starts at `version: 0.1.0`, with internal dependency ranges `^0.1.0`. The first publish (C14) is `0.1.0`.
+- **No changesets before the first publish.** The PR changeset check is wired in C1 but disabled (e.g. behind a `if: false` / an env switch, documented in AGENTS.md); C14 switches it on after the first publish.
+- AGENTS.md gotchas gain: "before 1.0, a breaking change uses a **minor** changeset; a major changeset on a `0.x` package jumps to `1.0.0`".
+- Acceptance criterion 7 (`npx changeset status` works) is unchanged.
 
 ## Resolved questions
 

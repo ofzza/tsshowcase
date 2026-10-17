@@ -116,6 +116,7 @@ Rules:
 | D45 | **Prefix:** classes `tss-…`, CSS variables `--tss-…` | |
 | D46 | **One styling policy, enforced in both CSS (stylelint) and inline styles/CSS-in-JS (ESLint).** Allowed: `var(--tss-…)` references, `calc()`/`color-mix()` built from them, and structural keywords (`display: flex`, `text-align: center`, `position`, `overflow`, `0`, `100%`, `auto`, `inherit`, …). Banned: literal design values (colours, lengths, font sizes, radii, shadows, durations, …) | Applies **only to tsshowcase's own module and theme packages**, never to user showcases. Escape hatch for genuinely dynamic values: a line-level disable comment that requires a written reason. This replaces the earlier idea of banning inline `style={}` entirely |
 | D47 | **The opt-in React rule preset for the logic/presentation split is named `headless`** | `useX` holds the logic and prop getters, `renderX` is a pure presentation function, and `X` only wires them together. Config: `presets: ['headless']`. Not named after stdblox |
+| D48 | **`-base-react` builds on `-base-vite`** | Its build/dev half is a React wrapper around `-base-vite` (plugin-react, React dedupe, tsconfig paths, runtime building blocks). Its check/init half (analysis, rules, scaffolding) has no bundler involvement. It exposes a **base module class** with every contract method implemented; layout modules (e.g. `react-default`) extend it and supply only their app entry and layout |
 
 ## 4. Open questions
 

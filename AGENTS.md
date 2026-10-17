@@ -52,7 +52,7 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | 0 | Bootstrap: REQUIREMENT.md, AGENTS.md, CLAUDE.md, initial commit | ✅ done |
 | 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25). D26–D48 were decided during super-planning; details continue in the chunk plans |
 | 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | ✅ **approved**: `.plans/01-super-plan.md`, with the review triage and final consistency review in `.plans/01a-super-plan-review.md` |
-| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔜 next: **C1 (Monorepo foundation)**, wave P1 |
+| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔄 in progress: C1 ✅ approved; 🔜 next: **C2 (Plugin contracts)**, wave P2 |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
 ### How to resume (fresh session)
@@ -77,8 +77,8 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 
 | Chunk | Plan file | Status |
 |-------|-----------|--------|
-| C1 Monorepo foundation | – | 🔜 next |
-| C2 Plugin contracts | – | ⏳ (stays open until C3 is approved) |
+| C1 Monorepo foundation | `.plans/chunk-01-monorepo-foundation.md` | ✅ approved |
+| C2 Plugin contracts | – | 🔜 next (stays open until C3 is approved) |
 | C3 Theme system | – | ⏳ |
 | C4 Repo scanning | – | ⏳ |
 | C5 Markdown pipeline | – | ⏳ |
@@ -119,7 +119,7 @@ Rules:
 | D14 | **This repo is an npm workspaces monorepo** | Separate packages (full list: super-plan package table): `-api`, the CLI, themes, the test runner, `-base-vite`, `-base-react` and the React module. The CLI depends on the built-in packages so that lookup by name works (D9) |
 | D15 | **Naming:** `@ofzza/tsshowcase` (the CLI, binary `tsshowcase`), with siblings `@ofzza/tsshowcase-<kind>-<name>` | See D27 for the full scheme |
 | D16 | **v1 scope adds:** a `dev` action (watch + HMR; module-owned via D43); an `init`/scaffold action (generate the stubs a module requires); **workspace (monorepo) showcased repos**; a machine-readable check report (`--format json`, non-zero exit on errors) | **Interface consequences:**<br>• the module needs a scaffold method;<br>• the input model must be multi-package from day one (a single-package repo = one package);<br>• `dev` needs a test strategy |
-| D17 | **Node >= 20, ESM only** | |
+| D17 | ~~**Node >= 20**~~, **ESM only** | The Node floor is **revised by D49** (>= 22.12) |
 | D18 | **In `dev`, tests run in watch mode** | Results are pushed live to the open showcase through the module's dev server (D42, D43), so the test-runner interface must support watch and streamed updates |
 | D19 | **Showcase hierarchy for workspaces:** repo README (home) → each package (its README and licence) → that package's units | The package level collapses for a single-package repo |
 | D20 | **Layout variants are separate rendering modules** (e.g. a React per-page module vs a React single-page module) | They share a common React base (resolved by D26/D48: the `-base-react` package with a base module class) |
@@ -151,6 +151,15 @@ Rules:
 | D46 | **One styling policy, enforced in both CSS (stylelint) and inline styles/CSS-in-JS (ESLint).** Allowed: `var(--tss-…)` references, `calc()`/`color-mix()` built from them, and structural keywords (`display: flex`, `text-align: center`, `position`, `overflow`, `0`, `100%`, `auto`, `inherit`, …). Banned: literal design values (colours, lengths, font sizes, radii, shadows, durations, …) | Applies **only to tsshowcase's own module and theme packages**, never to user showcases. Escape hatch for genuinely dynamic values: a line-level disable comment that requires a written reason. This replaces the earlier idea of banning inline `style={}` entirely |
 | D47 | **The opt-in React rule preset for the logic/presentation split is named `headless`** | `useX` holds the logic and prop getters, `renderX` is a pure presentation function, and `X` only wires them together. Config: `presets: ['headless']`. Not named after stdblox |
 | D48 | **`-base-react` builds on `-base-vite`** | Its build/dev half is a React wrapper around `-base-vite` (plugin-react, React dedupe, tsconfig paths, runtime building blocks). Its check/init half (analysis, rules, scaffolding) has no bundler involvement. It exposes a **base module class** with every contract method implemented; layout modules (e.g. `react-default`) extend it and supply only their app entry and layout |
+| D49 | **Node floor raised to `>=22.12`** for every package (revises D17) | Node 20 has been end of life since 2026-04-30. Vitest 5 needs `^22.12` and changesets `^22.11`. The user first chose to keep 20, then picked the single raised floor over a split (users ≥ 20.19, dev on 22+). This repo's dev toolchain uses Node 24 (`.nvmrc`). CI runs on Node 22 until C14 adds the matrix |
+| D50 | **This repo's toolchain pins TypeScript 6.0.x** | TS 7.0 (the native port) is `latest`, but `typescript-eslint` supports TypeScript below 6.1 only. Move to 7.x once it does. Analysis of showcased repos (C8) uses *their* TypeScript |
+| D51 | **Licence: MIT, author `ofzza`**, for the root and every package | Each package carries a copy of `LICENSE`, since npm only packs a package's own licence file |
+| D52 | **The user's TS template (`~/projects/ofzza/.templates/ts`) is the baseline** for this repo's tooling, conventions and docs, adapted to a monorepo | Adopted from it: Vitest typecheck of tests (+ `spawnTimeout` workaround), the `debug` project and `*.debug.test.ts` scratch tests, `.vscode` extensions/launch configs, `.gitignore` conventions (`*.gitignore.*`, re-included `.vscode` files), code-style rules, the docs-and-tests trigger table, its gotchas, `@types/node` pinned to the floor major, and (for C14) its PUBLISH.md checklist and dual-resolution consumer smoke test. Deviation: `moduleResolution: nodenext` instead of `bundler` |
+| D53 | **Docs split as in the template:** `AGENTS.md` (agents; also keeps the process and decision log), `CONTRIBUTE.md` (contributors, with a **glossary**), `README.md` (users). `PUBLISH.md` arrives with C14 | |
+| D54 | **CI runs a Node `[22, 24]` matrix from C1** (refines D33) | C14 adds Node 26 |
+| D55 | **Prettier checks the whole repo, Markdown included** | Deviation from the template, which checks `src` only. `REQUIREMENT.md` (verbatim) and generated changeset files are ignored |
+| D56 | **Keeping docs, tests and showcases current at scale:** the template's trigger table, extended with unit, contract, catalogue, CLI, package, fixture and changeset rows; **one place per fact** (a package's export list lives only in its README, a unit's docs only in its own README); and **automated drift checks** | In C1: `ci:readme-samples` (type-checks every ts/tsx README sample; `nocheck` fence opt-out), `ci:links` (`remark-validate-links`: relative links and heading anchors), and a PR changeset check. Later: `tsshowcase check` on this repo (C9) and a showcase smoke render (C10). README prose and showcase content stay a manual review concern. Details in the C1 plan §10 |
+| D57 | **Package directories use the full npm package name without the `@ofzza/` scope** | `packages/tsshowcase/` (CLI), `packages/tsshowcase-api/`, `packages/tsshowcase-module-react-default/`, …; Vitest projects are named after them (`unit:<dir>`) |
 
 ## 4. Open questions
 

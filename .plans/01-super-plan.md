@@ -4,21 +4,22 @@
 
 ## Packages (D14, D15, D26, D27, D43)
 
-| Package | Role |
-|---------|------|
-| `@ofzza/tsshowcase-api` | Contracts only: TS types and interfaces, `IMPLEMENTED_API_VERSION`, interface changelog, small runtime helpers (e.g. issue constructors). Has no heavy deps. |
-| `@ofzza/tsshowcase` | The CLI (binary `tsshowcase`): repo scanning, markdown pipeline, plugin loading, config, data assembly, `dev` file watching, and the `check` / `build` / `dev` / `init` actions. It doesn't bundle anything itself; modules build (D43). Depends on the built-in packages so they can be looked up by name (D9). |
-| `@ofzza/tsshowcase-theme-default` | Default themes: built-in names `default-light` and `default-dark`. Also holds the reference documentation for the theme catalogue. |
-| `@ofzza/tsshowcase-testrunner-vitest` | Prepackaged Vitest test runner (D3), with run and watch modes. Built-in name: `vitest`. |
-| `@ofzza/tsshowcase-base-vite` | Reusable Vite pipeline helper (D43). Not a loadable module. Handles: data embedding as a virtual module, theme CSS inclusion and switcher setup, `base: './'`, output dir, dev server, HMR and the live update channel. Modules call it with their framework plugins and app entry. |
-| `@ofzza/tsshowcase-base-react` | Shared React base (D20, D26, D48). Layout-agnostic and **not itself a loadable module**. Two halves:<br>• **check/init (Node, no bundler):** static entry analysis, base rules and the `headless` preset, scaffold templates;<br>• **build/dev:** a **React wrapper around `-base-vite`** (plugin-react, React deduped from the showcased repo, tsconfig paths) plus the runtime building blocks (data and live-channel access, README HTML renderer, showcase embed, test-results view, theme switcher, hash router).<br>Exposes a **base module class** with analyze / verify / scaffold / runTests / build / dev already implemented. Layout modules extend it and supply only their app entry and layout. Depends on `-base-vite`. |
-| `@ofzza/tsshowcase-module-react-default` | The v1 rendering module (D22). Built-in name: `react-default`. Contains **layout only**: app shell, navigation tree (repo → packages → units), route scheme, and the home/package/unit pages composed from the base building blocks. |
+| Package                                  | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ofzza/tsshowcase-api`                  | Contracts only: TS types and interfaces, `IMPLEMENTED_API_VERSION`, interface changelog, small runtime helpers (e.g. issue constructors). Has no heavy deps.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `@ofzza/tsshowcase`                      | The CLI (binary `tsshowcase`): repo scanning, markdown pipeline, plugin loading, config, data assembly, `dev` file watching, and the `check` / `build` / `dev` / `init` actions. It doesn't bundle anything itself; modules build (D43). Depends on the built-in packages so they can be looked up by name (D9).                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `@ofzza/tsshowcase-theme-default`        | Default themes: built-in names `default-light` and `default-dark`. Also holds the reference documentation for the theme catalogue.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `@ofzza/tsshowcase-testrunner-vitest`    | Prepackaged Vitest test runner (D3), with run and watch modes. Built-in name: `vitest`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `@ofzza/tsshowcase-base-vite`            | Reusable Vite pipeline helper (D43). Not a loadable module. Handles: data embedding as a virtual module, theme CSS inclusion and switcher setup, `base: './'`, output dir, dev server, HMR and the live update channel. Modules call it with their framework plugins and app entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `@ofzza/tsshowcase-base-react`           | Shared React base (D20, D26, D48). Layout-agnostic and **not itself a loadable module**. Two halves:<br>• **check/init (Node, no bundler):** static entry analysis, base rules and the `headless` preset, scaffold templates;<br>• **build/dev:** a **React wrapper around `-base-vite`** (plugin-react, React deduped from the showcased repo, tsconfig paths) plus the runtime building blocks (data and live-channel access, README HTML renderer, showcase embed, test-results view, theme switcher, hash router).<br>Exposes a **base module class** with analyze / verify / scaffold / runTests / build / dev already implemented. Layout modules extend it and supply only their app entry and layout. Depends on `-base-vite`. |
+| `@ofzza/tsshowcase-module-react-default` | The v1 rendering module (D22). Built-in name: `react-default`. Contains **layout only**: app shell, navigation tree (repo → packages → units), route scheme, and the home/package/unit pages composed from the base building blocks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## Chunks
 
 Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk delivers its own docs, its tests and the fixtures it needs (D10 conventions; docs ship with code).
 
 ### C1 — Monorepo foundation
+
 - **Goal:** an empty but fully wired workspace.
 - **Requirements:**
   - npm workspaces with the package skeletons listed above.
@@ -31,7 +32,8 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **Dogfooding (D41):** the package skeletons follow the unit convention (a dir per exported unit, README, tests, showcases per D37).
 - **Depends on:** nothing.
 
-### C2 — Plugin contracts (`-api`)  ★ critical path, designed collaboratively in detail before any code (assignment requirement)
+### C2 — Plugin contracts (`-api`) ★ critical path, designed collaboratively in detail before any code (assignment requirement)
+
 - **Goal:** the complete, documented v1 contracts.
 - **Requirements:**
   - **Input data model:**
@@ -54,16 +56,17 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **Issue model:** severity, message, file, rule id.
   - **Test-runner interface:** `apiVersion`, `detect(repo)`, `run(options)`, `watch(options, onUpdate)`; a raw result hierarchy (file → suite → test, with status, duration and error); never throws on failing tests (D8, D42).
   - **Theme contract:** a theme manifest (`apiVersion`, name(s), CSS entry files, light/dark flags, D7).
-  - **Theme catalogue constants (D28):** every documented CSS class name and CSS variable name, exported as typed constants that modules import. The *values* and the *design* of the hierarchy come from C3; C2 provides the slot and the export mechanism, and C3's plan fills it in (it extends `-api`).
+  - **Theme catalogue constants (D28):** every documented CSS class name and CSS variable name, exported as typed constants that modules import. The _values_ and the _design_ of the hierarchy come from C3; C2 provides the slot and the export mechanism, and C3's plan fills it in (it extends `-api`).
   - **Config file schema** (D6).
   - **Data handed to `build`/`dev`:** its shape, plus the dev update protocol (data changes and test updates, D18).
   - **Repo-level verification:** issues not tied to one directory (e.g. an unresolvable entry, an export whose source is shared with other exports). Covered by a repo-level hook or by `analyze` returning issues.
   - **Output tolerance:** the CLI tolerates unknown fields in module outputs (analysis results, issues, test results) as well as in inputs (D13).
   - Interface changelog started at 1.0.0.
 - **Depends on:** C1 (only for where the code lives; planning is independent).
-- **Note:** the C2 plan stays *open* until the C3 plan is approved, because C3 fills in the catalogue constants in `-api` (D28). Implementing C3 modifies the `-api` package.
+- **Note:** the C2 plan stays _open_ until the C3 plan is approved, because C3 fills in the catalogue constants in `-api` (D28). Implementing C3 modifies the `-api` package.
 
 ### C3 — Theme system + default themes
+
 - **Goal:** design the CSS variable hierarchy and class catalogue (the theme ⇄ module contract; published as constants in `-api`, D28), plus the light and dark themes.
 - **Requirements:**
   - **Layered variables:**
@@ -92,6 +95,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2 (theme manifest shape only). The catalogue design itself is independent.
 
 ### C4 — Repository scanning (CLI core)
+
 - **Goal:** turn a repo on disk into the repo / package / directory layer of the C2 input model. Units come from the module's `analyze` (C8), tests from the runner (C7), and HTML from C5.
 - **Requirements:**
   - `.gitignore`-aware recursive walk:
@@ -106,6 +110,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2.
 
 ### C5 — Markdown pipeline (CLI core)
+
 - **Goal:** markdown → themed HTML (D23).
 - **Requirements:**
   - unified/remark/rehype with GFM and heading slugs.
@@ -119,6 +124,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2, C3 (class names).
 
 ### C6 — Plugin loading + configuration (CLI core)
+
 - **Goal:** resolve and validate modules, themes and runners (runners on the module's behalf, D34), and the effective config.
 - **Requirements:**
   - Reference resolution order: built-in name → npm package → path (D9).
@@ -131,6 +137,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2.
 
 ### C7 — Vitest test runner (`-testrunner-vitest`)
+
 - **Goal:** the D3 prepackaged runner.
 - **Requirements:**
   - Runs the showcased repo's Vitest via the Vitest Node API, using the repo's own vitest install and config.
@@ -141,6 +148,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2.
 
 ### C8 — React base: Node side (`-base-react`)
+
 - **Goal:** everything `check` and `init` need for React/TS repos. Also the first version of the React **base module class** (Node-side methods: analyze / verify / scaffold), **plus the loadable `-module-react-default` class** extending it, so that C9 can run `--module react-default` before C10 exists. No bundler involvement (D48).
 - **Requirements:**
   - **Static entry analysis** with the TS compiler API (D5):
@@ -160,6 +168,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2, C4 (fixtures).
 
 ### C9 — CLI shell + `check` + `init`
+
 - **Goal:** the first usable vertical slice.
 - **Requirements:**
   - CLI framework, global flags (`--module`, `--theme`, `--config`, `--cwd`).
@@ -172,6 +181,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C4, C6, C8.
 
 ### C10 — React runtime building blocks + default module (`-base-react` runtime, `-module-react-default`)
+
 - **Goal:** the generated SPA. The base module class gains `build`/`dev`, implemented as a React wrapper around `-base-vite` (C15), plus the runtime building blocks. `-module-react-default` adds only its app entry and layout (D48).
 - **Requirements:**
   - **React input to `-base-vite` (C15)** and `build`/`dev` implementations that call it:
@@ -191,6 +201,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2 (data, test-result and live-channel shapes), C3, C5 (HTML shape), C7 (runner, for `runTests`), C8 (base and the module class), C15 (Vite helper).
 
 ### C11 — CLI `build` + `dev`
+
 - **Goal:** orchestration. The CLI assembles data and calls the module's `build`/`dev` (D43); it doesn't bundle anything itself.
 - **Requirements:**
   - **Data assembly:** C4 scan → module `analyze` → module `runTests` (which uses C7) → C5 HTML (links via `resolveRoute`) → `module.build(ctx)` / `module.dev(ctx)`.
@@ -203,6 +214,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C5, C6, C7, C9, C10.
 
 ### C15 — Vite pipeline helper (`-base-vite`)
+
 - **Goal:** the reusable Vite build/dev pipeline that modules call (D43). Numbered C15 to avoid renumbering existing chunks.
 - **Requirements:**
   - API: `build({ data, themes, outDir, plugins, entry, resolve… })` and `dev({ …, onDataUpdate, onTestUpdate })`.
@@ -213,6 +225,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C2, C3.
 
 ### C12 — End-to-end acceptance
+
 - **Goal:** proof that v1 works as a whole.
 - **Requirements:**
   - E2E matrix over the fixtures (D11): check / init / build / dev smoke, for single-package and workspace repos.
@@ -220,6 +233,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C11.
 
 ### C13 — Documentation
+
 - **Goal:** user-facing and author-facing docs, consolidated and complete.
 - **Requirements:**
   - Root README (what tsshowcase is, quick start, CLI reference).
@@ -229,6 +243,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Depends on:** C11 (can run in parallel with C12).
 
 ### C14 — Release
+
 - **Goal:** v1 publishable (D31–D33).
 - **Requirements:**
   - **CI extended:** a Node version matrix (20/22/24); E2E (C12) in CI.
@@ -244,38 +259,38 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 ## Dependency edges
 
-| Chunk | Depends on |
-|-------|-----------|
-| C1 | – |
-| C2 | C1 (placement only) |
-| C3 | C2 (theme manifest; fills the `-api` catalogue, D28) |
-| C4 | C2 |
-| C5 | C2, C3 |
-| C6 | C2 |
-| C7 | C2 |
-| C8 | C2, C4 (fixtures) |
-| C9 | C4, C6, C8 |
-| C10 | C2, C3, C5, C7, C8, C15 |
-| C11 | C5, C6, C7, C9, C10 |
-| C12 | C11 |
-| C13 | C11 |
-| C14 | C12, C13 |
-| C15 | C2, C3 |
+| Chunk | Depends on                                           |
+| ----- | ---------------------------------------------------- |
+| C1    | –                                                    |
+| C2    | C1 (placement only)                                  |
+| C3    | C2 (theme manifest; fills the `-api` catalogue, D28) |
+| C4    | C2                                                   |
+| C5    | C2, C3                                               |
+| C6    | C2                                                   |
+| C7    | C2                                                   |
+| C8    | C2, C4 (fixtures)                                    |
+| C9    | C4, C6, C8                                           |
+| C10   | C2, C3, C5, C7, C8, C15                              |
+| C11   | C5, C6, C7, C9, C10                                  |
+| C12   | C11                                                  |
+| C13   | C11                                                  |
+| C14   | C12, C13                                             |
+| C15   | C2, C3                                               |
 
 ## Planning order (stage 3)
 
 Plans are approved one at a time. "Parallel" means a group's members only depend on chunks already planned, so they could be planned in any order or at the same time.
 
-| Wave | Chunks | Why |
-|------|--------|-----|
-| P1 | **C1** | Small; fixes the layout everything else refers to. |
-| P2 | **C2**, then **C3** | C2 is the critical, collaborative contract. C3 fills C2's catalogue, so the C2 plan stays open until C3 is approved. |
-| P3 | **C4, C5, C6, C7, C15** (any order or parallel) | Each depends only on C2/C3. Planning C7 early also prototypes the Vitest Node API, the least-known piece, before the contracts are locked in. |
-| P4 | **C8** | Needs C4's fixtures. |
-| P5 | **C9** and **C10** (parallel) | C9 needs C4, C6 and C8; C10 needs C3, C5, C7, C8 and C15. The loadable module class lives in C8, so they don't depend on each other. |
-| P6 | **C11** | Integrates C9 and C10. |
-| P7 | **C12** and **C13** (parallel) | Both depend only on C11. |
-| P8 | **C14** | Final. |
+| Wave | Chunks                                          | Why                                                                                                                                           |
+| ---- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1   | **C1**                                          | Small; fixes the layout everything else refers to.                                                                                            |
+| P2   | **C2**, then **C3**                             | C2 is the critical, collaborative contract. C3 fills C2's catalogue, so the C2 plan stays open until C3 is approved.                          |
+| P3   | **C4, C5, C6, C7, C15** (any order or parallel) | Each depends only on C2/C3. Planning C7 early also prototypes the Vitest Node API, the least-known piece, before the contracts are locked in. |
+| P4   | **C8**                                          | Needs C4's fixtures.                                                                                                                          |
+| P5   | **C9** and **C10** (parallel)                   | C9 needs C4, C6 and C8; C10 needs C3, C5, C7, C8 and C15. The loadable module class lives in C8, so they don't depend on each other.          |
+| P6   | **C11**                                         | Integrates C9 and C10.                                                                                                                        |
+| P7   | **C12** and **C13** (parallel)                  | Both depend only on C11.                                                                                                                      |
+| P8   | **C14**                                         | Final.                                                                                                                                        |
 
 ## Implementation order (stage 4)
 

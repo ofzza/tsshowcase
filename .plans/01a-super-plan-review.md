@@ -4,6 +4,7 @@ An agent with no prior context reviewed REQUIREMENT.md, AGENTS.md and the draft 
 Its verdict: the docs are largely self-explanatory, with the main weak spot being who owns what across the module, the CLI and the runner.
 
 ## Applied directly to the super-plan (no decision needed)
+
 - The C4 goal now says it covers only the repo/package/directory layer; units come from `analyze`.
 - C8 now also ships the loadable `-module-react-default` class with its Node-side methods. Without it, the `check`/`init` slice (D29) had nothing to load.
 - C8 maps `exports`/dist back to source, and uses the repo's own TypeScript.
@@ -23,6 +24,7 @@ Its verdict: the docs are largely self-explanatory, with the main weak spot bein
 - AGENTS.md: D31 now clarifies D13 (the `-api` version = the interface version); the D3 inversion of "tests come from the CLI" is noted in the assignment summary; the stage status mentions D26–D33.
 
 ## Needs user decisions
+
 1. ✅ D34. Test ownership: does the module pick and run the runner (D3), or is the runner a user-selected plugin that the CLI calls?
 2. ✅ D35. Route ownership: who maps unit → URL for link rewriting at CLI time?
 3. ✅ D36 (nesting allowed) and D38 (type-only units need a README only). Unit definition: is a unit one directory or one symbol? Are type-only exports units? Can units be nested?
@@ -32,17 +34,20 @@ Its verdict: the docs are largely self-explanatory, with the main weak spot bein
 7. ✅ D40. Lazy file accessors vs "the list of files and their contents" (the requirement wording).
 
 ## Deferred to chunk plans (recorded there as requirements or questions)
+
 - C2: schema technology; whether the JSON report shape is contract or CLI detail; per-package config and exclusion in workspaces.
 - C3: how the default is picked when there are more than two themes; whether user showcase components are bound by the theme rules.
-- C4: whether workspace packages are scanned from the root or per package.
+- C4: whether workspace packages are scanned from the root or per package; Prettier handling of intentionally unparseable fixture files (they would fail `ci:prettier`; proposed in the C1 review, not yet decided); the `copyFixture()` test helper (specified in the C1 plan §5): its API and where it lives.
 - C7: supported Vitest range; repos with no Vitest or with Jest; Vitest projects config; tests outside the unit dir; two Vite versions in one process.
 - C8: `init` semantics (new unit vs filling missing stubs; adding the export to the entry).
 - C10: supported React range; workspace cross-imports resolving to a stale `dist` (alias to source?).
+- C14 (from the C1 template review, D52): consumer smoke test under both `nodenext` and `bundler` resolution; a `prepublishOnly` guard; PUBLISH.md mirroring the template checklist; Node 26 in the CI matrix (D54).
 - C13: document that `check` executes config and custom modules (untrusted PRs in CI).
 
 ## Final consistency review (after D48)
 
 A full pass over REQUIREMENT.md, AGENTS.md and the super-plan. Fixed:
+
 - **AGENTS.md formatting:**
   - blank lines inside the decisions table broke it into several tables;
   - the assignment-summary "changed by" notes were mis-indented and incomplete (they now cover D37/D38 for `check`, D40 for `verify`, D16 for `dev`/`init`).

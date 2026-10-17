@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -59,7 +59,7 @@ Every package gets the same files:
 packages/<pkg>/
   package.json
   tsconfig.json          type-check config: all of src/ including tests, noEmit
-  tsconfig.build.json    emit config: composite, src → dist, excludes tests/showcases, references its workspace deps
+  tsconfig.build.json    emit config: composite, src → dist (`include` also has src/**/*.json, A1), excludes tests/showcases, references its workspace deps
   README.md              template structure: title, purpose, Get / Usage / Development / Contributing (Usage "under construction")
   LICENSE                copy of the root LICENSE (npm only packs the package's own licence file)
   src/
@@ -96,7 +96,7 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
 
 - `tsconfig.base.json` holds the shared options:
   - `module`/`moduleResolution: nodenext`, `target: es2023` (safe on Node 22), `lib` to match;
-  - `strict`, `verbatimModuleSyntax`, `isolatedModules`, `skipLibCheck`, `forceConsistentCasingInFileNames`, `resolveJsonModule`;
+  - `strict`, `verbatimModuleSyntax`, `isolatedModules`, `skipLibCheck`, `forceConsistentCasingInFileNames`, `resolveJsonModule`, `allowArbitraryExtensions` (A1: tsschema sidecars type JSON imports);
   - `declaration`, `declarationMap`, `sourceMap`;
   - `customConditions: ["source"]`;
   - `types: ["node"]`.
@@ -116,7 +116,7 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
 - **Prettier:**
   - the template's `.prettierrc` (printWidth 160, single quotes, 2 spaces, `arrowParens: always`);
   - **checks the whole repo, Markdown included (D55)** (deviation: the template checks `src` only);
-  - `.prettierignore` covers `dist`, `node_modules`, lockfiles, `.changeset/*.md` (generated) and `REQUIREMENT.md` (verbatim, never edited).
+  - `.prettierignore` covers `dist`, `node_modules`, lockfiles, `.changeset/*.md` (generated), `**/*.d.json.ts` (generated tsschema sidecars, A1) and `REQUIREMENT.md` (verbatim, never edited).
 - **ESLint (flat config, the template's file):**
   - `@eslint/js` recommended (a direct devDependency, as the template's gotcha requires), `typescript-eslint` recommended (type-aware for `packages/*/src`), and `eslint-config-prettier`;
   - the template's rule tweaks (`_`-prefixed unused vars, args and catch bindings allowed; `no-explicit-any`, `ban-ts-comment`, `no-empty-object-type` off);
@@ -136,7 +136,8 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
 - **`.vscode/launch.json`:** the template's three configs ("Debug ALL Test Files", "Debug UNIT Test Files" → `--project "unit:*"`, "Debug Current Test File" → `--project debug`).
 - **Root scripts** (with `npm-run-all2`, as the template):
   - `clean`, `build` (`prebuild: clean`), `dev` (`tsc -b --watch`), `lint` (ESLint), `format` / `format:check` (Prettier), `typecheck` (root files), `test` (`npm-run-all test:*`; `test:unit` → `vitest run --project "unit:*"`);
-  - `ci` = `npm-run-all ci:*` → `ci:build`, `ci:typecheck`, `ci:eslint`, `ci:prettier`, `ci:test-unit`, `ci:readme-samples`, `ci:links` (§10);
+  - `ci` = `npm-run-all ci:*` → `ci:build`, `ci:typecheck`, `ci:eslint`, `ci:prettier`, `ci:test-unit`, `ci:readme-samples`, `ci:links` (§10), `ci:schemas` (A1);
+  - `schemas` → `tsschema generate --mode sidecar "packages/*/src/**/*.schema.json"` (A1); `ci:schemas` → the same with `--check`. `build` runs `schemas`, then `tsc -b`, then `scripts/copy-sidecars.mjs` (A1);
   - `prepare: npm run build` (root only, as the template), `prepublishOnly` guard noted for C14;
   - `fixtures:install`, `fixtures:clean`;
   - `changeset` (the changesets CLI).
@@ -286,7 +287,7 @@ What stays manual (and is said so in the trigger table's intro): whether README 
 - The `engines` field states the **runtime** floor (D49): Vitest 5 and Vite 8 run inside tsshowcase on users' machines. This is deliberately different from the template's advice not to encode the _dev toolchain's_ floor in `engines`.
 - Every test file is reported twice (runtime + typecheck), and a test file with no runtime suite needs `--passWithNoTests`.
 - `npm-run-all2`, not `npm-run-all`.
-- Plus this repo's own: the fixture walk-up (§5) and the `source` condition at pack time (§6).
+- Plus this repo's own: the fixture walk-up (§5), the `source` condition at pack time (§6), and **sidecars not reaching `dist`** (A1).
 
 ## Acceptance criteria
 
@@ -313,6 +314,18 @@ Contracts (C2), theme design and stylelint (C3), all runtime dependencies, React
   - `PUBLISH.md` mirroring the template's checklist: clean and synced `develop`, green CI, docs match code, `npm pack --dry-run` contents, unused version, `npm whoami`, fast-forward `master` to `develop`, publish from `master`, prerelease dist-tags, 2FA (`--otp`, generated fresh because `prepublishOnly` runs first), and first-publish registry 404 caching.
 - **C9:** exclude `fixtures/` from this repo's own `tsshowcase check`.
 - **C10:** the showcase smoke-render test (§10c).
+
+## Amendment A1: JSON schemas with tsschema sidecars (D58, D62), re-approved
+
+Raised during C2 planning. Our JSON Schemas (the config schemas in `-api`, our modules' options schemas) are plain `*.schema.json` files typed through committed `@ofzza/tsschema` sidecars (`*.d.json.ts`). C1 wires the tooling so later chunks only add schema files:
+
+- **Dependencies:** `@ofzza/tsschema` as a root devDependency (for the `tsschema` command). Packages that publish schema-derived types (`-api` from C2) add it as a regular dependency themselves.
+- **TypeScript:** `allowArbitraryExtensions` in `tsconfig.base.json` (so JSON imports pick up their sidecars); each package's `tsconfig.build.json` `include` adds `src/**/*.json` (with a sidecar present, `tsc` no longer copies the JSON on its own).
+- **Scripts:** `schemas` generates sidecars for `packages/*/src/**/*.schema.json`; `ci:schemas` runs it with `--check`, failing when a committed sidecar is stale. `build` = `schemas` → `tsc -b` → `scripts/copy-sidecars.mjs`. The `schemas` script must succeed when there are no schema files yet (C1 has none).
+- **`scripts/copy-sidecars.mjs`:** copies each `src/**/*.d.json.ts` to the matching path under `dist/`. **Why:** `tsc` never copies declaration files from source, and without the sidecar a consumer's types inferred from the JSON silently become `never` (verified by experiment with TS 6.0.3 during C2 planning). With the sidecar in `dist`, consumers need no tsconfig changes.
+- **Formatting and linting:** sidecars are generated and committed; `.prettierignore` and the ESLint ignores list `**/*.d.json.ts`.
+- **Docs:** AGENTS.md gains the gotcha ("sidecars don't reach `dist` on their own") and a trigger-table row: "changed a `*.schema.json`" → run `npm run schemas`, commit the sidecar, update the README documenting it.
+- **Acceptance (added):** 11. `npm run ci:schemas` passes with zero schema files; a throwaway `*.schema.json` gets a sidecar from `npm run schemas`, `ci:schemas` fails after editing the JSON without regenerating, and `npm run build` puts the sidecar into `dist`. Reverted afterwards.
 
 ## Resolved questions
 

@@ -52,7 +52,7 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | 0 | Bootstrap: REQUIREMENT.md, AGENTS.md, CLAUDE.md, initial commit | ✅ done |
 | 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25). D26–D48 were decided during super-planning; details continue in the chunk plans |
 | 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | ✅ **approved**: `.plans/01-super-plan.md`, with the review triage and final consistency review in `.plans/01a-super-plan-review.md` |
-| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔄 in progress: C1 ✅ approved; 🔜 next: **C2 (Plugin contracts)**, wave P2 |
+| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔄 in progress: C1 ✅ approved (incl. amendment A1); 🔄 **C2 (Plugin contracts)** drafting, wave P2 |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
 ### How to resume (fresh session)
@@ -77,8 +77,8 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 
 | Chunk | Plan file | Status |
 |-------|-----------|--------|
-| C1 Monorepo foundation | `.plans/chunk-01-monorepo-foundation.md` | ✅ approved |
-| C2 Plugin contracts | – | 🔜 next (stays open until C3 is approved) |
+| C1 Monorepo foundation | `.plans/chunk-01-monorepo-foundation.md` | ✅ approved (incl. amendment A1, D62) |
+| C2 Plugin contracts | `.plans/chunk-02-plugin-contracts.md` | 🔄 draft, round 3 (stays open until C3 is approved) |
 | C3 Theme system | – | ⏳ |
 | C4 Repo scanning | – | ⏳ |
 | C5 Markdown pipeline | – | ⏳ |
@@ -160,6 +160,11 @@ Rules:
 | D55 | **Prettier checks the whole repo, Markdown included** | Deviation from the template, which checks `src` only. `REQUIREMENT.md` (verbatim) and generated changeset files are ignored |
 | D56 | **Keeping docs, tests and showcases current at scale:** the template's trigger table, extended with unit, contract, catalogue, CLI, package, fixture and changeset rows; **one place per fact** (a package's export list lives only in its README, a unit's docs only in its own README); and **automated drift checks** | In C1: `ci:readme-samples` (type-checks every ts/tsx README sample; `nocheck` fence opt-out), `ci:links` (`remark-validate-links`: relative links and heading anchors), and a PR changeset check. Later: `tsshowcase check` on this repo (C9) and a showcase smoke render (C10). README prose and showcase content stay a manual review concern. Details in the C1 plan §10 |
 | D57 | **Package directories use the full npm package name without the `@ofzza/` scope** | `packages/tsshowcase/` (CLI), `packages/tsshowcase-api/`, `packages/tsshowcase-module-react-default/`, …; Vitest projects are named after them (`unit:<dir>`) |
+| D58 | **Schemas: JSON Schema (draft 2020-12) for module options and the config, validated with ajv in the CLI; TS types inferred with `@ofzza/tsschema`** | The schema is the source of truth: types are inferred, never hand-written. `-api` depends on tsschema (types only). Map-shaped fields infer as `unknown` until tsschema gains record/tuple inference (on its roadmap); acceptable until the v1.0.0 release (C14). Chosen over Standard Schema and zod. Storage form: D62 |
+| D59 | **Per-package config files in workspaces** | A workspace package may have its own `tsshowcase.config.*`, merged over the root one, with a restricted schema (`exclude`, `rules`, `moduleOptions`); repo-wide keys there are an error. v1: package directories only; nested directory configs may come later, additively. Chosen over a root `packages` override map |
+| D60 | **The `check --format json` report is a CLI detail, not part of `-api`** | `-api` holds only the internal plugin contracts. The report is external output: types exported from the CLI package, documented in the CLI README, with a `reportVersion` field. Shape specified in C9 |
+| D61 | **A unit may have several showcases** (`showcases: ShowcaseEntry[]`, possibly empty) | Going from one to many later would be breaking |
+| D62 | **Our JSON Schemas are plain `*.schema.json` files typed through committed tsschema sidecars** (`*.d.json.ts`, `tsschema generate --mode sidecar`), not `as const` literals | The schema is published as JSON (`$schema` completion, readable by any tool; docs in `description`). Costs: a `schemas` codegen script plus `ci:schemas` (`--check`), and a build step that copies sidecars into `dist`, because `tsc` doesn't and consumers' types would silently become `never` (verified by experiment). Applies to the config schemas and our own modules' options schemas; the contract (`optionsSchema: JsonSchema`) still accepts any value. Tooling is C1 amendment A1 |
 
 ## 4. Open questions
 

@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -34,6 +34,10 @@
   - **C8 → C9 (D106):** units (and `analyze` issues) outside `scope` are dropped by the CLI, not the module.
   - **VCS (D110):** from `package.json#repository` and config `vcs.*` only, links always use `HEAD`; no git (revises D24, D105).
   - **New private package `-test` (D104)** for test helpers (C1 amendment A3).
+
+- **R6 (C6 planning, D111–D117, review `06a-c6-plan-review.md`):**
+  - C6: plugin paths only as `file:` (D114); config files `.ts|.mts|.js|.mjs|.json|.jsonc`, JSON with comments (D115); C6 parses every option flag and positional, C9 owns the commands and `--help` (D111); flags vs config arrays (D112); `dev.host`/`dev.port` (D113); path-marked module options (D116, C2 amendment B5); path-loaded plugins get the CLI's tsshowcase packages (D117); `outDir` resolved by C6.
+  - C9: "CLI framework, global flags" → the command framework and `--help` (D111). C11: `--out` → `build [outDir]` (D93, stale since R3).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -86,7 +90,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `build(ctx)` and `dev(ctx)` (D43): the module builds the static app and returns it as files for the CLI to write (D64), or runs a dev server. `ctx` carries the assembled data, the themes (names, labels, schemes), the CLI-scoped `themeStylesheets` (D82) and (in dev) `onDataUpdate` / `onTestUpdate` / `onThemeStylesheetsUpdate` subscriptions;
     - `scaffold(ctx)` for `init` (D16): returns files for the CLI to write (D64);
     - `dispose()` at the end of every action (D63);
-    - module-specific options schema, as JSON Schema (D6, D58);
+    - module-specific options schema, as JSON Schema (D6, D58), with path and reference options marked (`OPTION_FORMAT`, D116);
   - **Inclusion rules for any module's output** (D43): how the CLI-scoped theme stylesheets are included (D82), how the switcher attribute works, showcase isolation (D89), static/relocatable output with no leaks. Mandatory even for modules that don't use `-base-vite`. How the data is embedded is the module's business (D77).
   - **Issue model:** severity, message, file, rule id.
   - **Test-runner interface:** `apiVersion`, `detect(repo)`, `run(options)`, `watch(options, onUpdate)`; a raw result hierarchy (file → suite → test, with status, duration and error); never throws on failing tests (D8, D42).
@@ -161,14 +165,15 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** resolve and validate modules, themes and runners (runners on the module's behalf, D34), and the effective config. For themes, C6 resolves references (D9, `#name`), loads and version-checks theme sets; C11 selects the configured themes, checks duplicate names and `defaultTheme`, and scopes (K14).
 - **Requirements:**
-  - Reference resolution order: built-in name → npm package → path (D9).
+  - Reference resolution: built-in name → npm package; paths only as `file:<path>` (D9, D114). Path-loaded plugins and config files get the CLI's own `@ofzza/tsshowcase*` packages (D117).
   - TS loading via jiti.
   - Default-export class instantiation.
   - `apiVersion` semver check with clear errors (D13).
   - `ctx.loadTestRunner(ref?, { candidates? })` helper: resolves an explicit ref, or auto-detects among candidate runners; throws on ambiguity, `undefined` when none (D42, D74).
   - Module-defined CLI flags mapped onto option paths (`optionFlags`, D79): parsing from the schema, precedence over config, collisions, `--help`.
   - The config schema (D6, D58, D59, D62), owned by the CLI package, not `-api` (D66): `config.schema.json` / `package-config.schema.json`, inferred types, `defineConfig`, documented in the CLI README. Design starting point: C2 plan §10.
-  - Config file discovery (`tsshowcase.config.ts|js|json`), validated against that schema, merged with CLI flags (D6).
+  - Config file discovery (`tsshowcase.config.ts|mts|js|mjs|json|jsonc`, JSON with comments, several files an error, D115), validated against that schema, merged with CLI flags (D6, D112).
+  - Argv parsing: every option flag and positional in one registry, two-phase `parseArgs` (D111); path-marked module options resolved per source before merging (D116); `outDir` resolution (D93).
   - Per-package config files in workspace packages (D59): discovery (using C4's workspace detection), the restricted package schema, and merging over the root config; each package's merged `moduleOptions` validated against the module's `optionsSchema` and handed over as `PackageInput.options` (D69).
   - Validation of module options.
   - **Scan and VCS keys:** `scope` and `ignore` (D107) with repeatable `--scope` / `--ignore` flags, `vcs.webUrl` / `vcs.directory` / `vcs.host` / `vcs.fileUrlTemplate` with `--vcs-*` flags (D110); resolved into C4's scanner inputs.
@@ -212,7 +217,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** the first usable vertical slice.
 - **Requirements:**
-  - CLI framework, global flags (`--module`, `--theme`, `--config`, `--cwd`).
+  - The command framework (action dispatch) and `--help` rendering from C6's `describeFlags`; global flags (`--module`, `--theme`, `--config`, `--cwd`) are parsed by C6 (D111).
   - **`check`:**
     - tree report of every scanned directory (in `scope`, not ignored), with per-directory issues (human-readable, coloured);
     - `--format json`;
@@ -253,7 +258,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - output to the positional `build [outDir]` (relative to the cwd), else config `outDir` (relative to the config file), default `./showcase` (D93);
     - **output guard:** refuse to write into a non-empty directory that tsshowcase didn't create (e.g. stdblox already has a `showcase/` source dir);
     - `--fail-on-test-failure` (D8); `--no-tests` (optional). The chunk plan decides whether "tests unavailable" (D42) also fails in strict mode, and whether test results are cached.
-  - **Writing the output (D64):** the module returns the site as files; the CLI validates the paths, checks the checkable inclusion rules, and writes `--out` with the output guard, an atomic swap and a marker file (details: C2 plan, "Recorded for later chunks").
+  - **Writing the output (D64):** the module returns the site as files; the CLI validates the paths, checks the checkable inclusion rules, and writes the output directory (`build [outDir]`, D93) with the output guard, an atomic swap and a marker file (details: C2 plan, "Recorded for later chunks").
   - **`check` first (D76):** `build` and `dev` run the full `check` and print the report; errors fail `build` unless `--no-check` (config `check: false`); `dev` never fails on them.
   - **Group READMEs (D78):** a `README.md` in a group directory becomes `GroupNode.readme`.
   - **`dev`:** the CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).

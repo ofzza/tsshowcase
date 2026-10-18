@@ -74,7 +74,7 @@ packages/<pkg>/
 - `repository` with `directory: packages/<pkg>`, plus `homepage` and `bugs`;
 - `type: module`, `engines.node: ">=22.12"` (D49; a deliberate _runtime_ floor, see §11), `sideEffects: false` (except where a later chunk needs CSS side effects);
 - `exports`: `{ ".": { "source": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./package.json": "./package.json" }`; `main` and `types` mirror it for older tooling (as the template);
-- `files: ["dist"]`, `publishConfig.access: public`;
+- `files: ["dist"]`, `publishConfig.access: public` (the CLI package also lists its two config schema copies at the package root, made by its own `build` script: C6 §5, wording-only note from C6 planning);
 - scripts: `clean`, `build` (with `prebuild: clean`, as the template).
 
 **The CLI package also gets** `bin: { "tsshowcase": "./dist/bin.js" }`, with a `src/bin.ts` stub that prints the version and "not implemented yet". It only prints when executed directly, never on import (the template's `import.meta.url` vs `process.argv[1]` guard), which keeps `sideEffects: false` truthful. C9 replaces it.

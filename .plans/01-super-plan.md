@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review before wave P3) pending approval. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -23,9 +23,9 @@
   - Stale text: C2 bullet (`onThemeStylesheetsUpdate`, `dispose`), C15 `dev()` line, C11 "Depends on", the P3 rationale, the closing note on contract gaps (K12).
   - Open points for every remaining chunk now live in AGENTS.md ("Open points per chunk"). A "v1 cut line" review runs once all chunk plans are approved, before implementation (K21).
   - Prototype spikes instead of gates (K17/K20, `01c-spike-results.md`): the in-process Vitest runner is proven (C7, D94) and the D89 technique is confirmed in Chromium, Firefox and WebKit, with fixes (C10, C13, C15, D95).
-- **R4 (review of all plans before wave P3, `01d-pre-p3-review.md`, D96–D99):**
+- **R4 (review of all plans before wave P3, `01d-pre-p3-review.md`, D96–D102):**
   - C8: a preliminary React showcase file format (D96). C10: finalises it; theme-owned breakpoints (D97); React resolved per showcased package (refines D91).
-  - L1–L3 recorded as known open issues (AGENTS §4); the rest as open points per chunk. The cut-line review stays after all plans (D98); C10 stays one chunk (D99); shell-mode showcases get no scheme selector (D100; C2 rule 7, C3 §1); `include` folders and the marker-file skip (D101; C2 §5.5, §10, C4, C6).
+  - L1–L3 recorded as known open issues (AGENTS §4); the rest as open points per chunk. The cut-line review stays after all plans (D98); C10 stays one chunk (D99); shell-mode showcases get no scheme selector (D100; C2 rule 7, C3 §1); `include` folders and the marker-file skip (D101; C2 §5.5, §10, C4, C6); `BuildContext.themes` carries only name, label and scheme (D102, C2 §5.8).
 
 ## Packages (D14, D15, D26, D27, D43)
 

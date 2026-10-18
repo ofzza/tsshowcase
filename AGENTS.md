@@ -54,7 +54,7 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | 0 | Bootstrap: REQUIREMENT.md, AGENTS.md, CLAUDE.md, initial commit | ✅ done |
 | 1 | Requirements Q&A: until the requirements are clear | ✅ done (D1–D25). D26–D48 were decided during super-planning; details continue in the chunk plans |
 | 2 | Super-plan: partition the work into chunks, order them, mark which can be planned in parallel and which sequentially; iterate until approved | ✅ **approved**: `.plans/01-super-plan.md`, with the review triage and final consistency review in `.plans/01a-super-plan-review.md`; revisions R1 (with C2) and R2 (with C3) re-approved |
-| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔄 in progress: C1, C2, C3 ✅ approved (super-plan R1, R2, R3 re-approved); 🔜 next: **wave P3** (C4, C5, C6, C7, C15, any order) |
+| 3 | Chunk plans: one at a time, in super-plan order; iterate and approve each | 🔄 in progress: C1, C2, C3 ✅ approved (super-plan R1–R4 re-approved; R4 from the review of all plans, `01d-pre-p3-review.md`); 🔜 next: **wave P3** (C4, C5, C6, C7, C15, any order) |
 | 4 | Implementation: one chunk at a time; explain each and wait for review before the next | ⏳ |
 
 ### How to resume (fresh session)
@@ -84,7 +84,7 @@ Stages (each one is interactive and needs explicit user approval; backtracking i
 | Chunk | Plan file | Status |
 |-------|-----------|--------|
 | C1 Monorepo foundation | `.plans/chunk-01-monorepo-foundation.md` | ✅ approved (incl. amendments A1, D62, and A2, D80) |
-| C2 Plugin contracts | `.plans/chunk-02-plugin-contracts.md` (review: `02a-c2-plan-review.md`) | ✅ approved, incl. amendments B1 and B2 |
+| C2 Plugin contracts | `.plans/chunk-02-plugin-contracts.md` (review: `02a-c2-plan-review.md`) | ✅ approved, incl. amendments B1, B2 and B3 |
 | C3 Theme system | `.plans/chunk-03-theme-system.md` (reviews: `03a-c3-plan-review.md`, `03b-c3-plan-review.md`) | ✅ approved (round 6) |
 | C4 Repo scanning | – | 🔜 next (wave P3; plan before C6) |
 | C5 Markdown pipeline | – | 🔜 next (wave P3) |
@@ -231,6 +231,7 @@ Rules:
 | D99 | **C10 stays one chunk for now** | May be split into the `-base-react` runtime and the `react-default` layout when it is planned (01d L17) | live |
 | D100 | **Shell-mode showcases follow the shell's theme and get no scheme selector** | The opt-in that renders a showcase inside the shell's shadow root (D41 dogfood showcases) also removes its light/dark selector: nested theme scopes don't work with the `.tss-shell[data-theme]` scoping wrapper. C2 rule 7 and C3 §1 amended. From `01d-pre-p3-review.md` L10 | live |
 | D101 | **`include` folders: the definitive scan boundary** | Config key `include` and a repeatable `--include` flag (root config only in v1): glob patterns relative to the repo root, default the whole repo. Only directories inside them, and not ignored by `.gitignore` or `exclude`, are scanned, verified and reported ("not ignored" = included and not gitignored). Repo metadata (manifests, READMEs, licences, workspace detection, config files, test configs) is read wherever it lives. `include` is the **definitive boundary** (several paths and globs allowed): units whose directories lie outside it are neither checked nor showcased, without an issue (documented). Separately, an export whose source lies outside its own package (an npm dependency, a sibling workspace package) is an external re-export, never a unit (C8). The scan also always skips an explicitly configured output directory and any directory holding tsshowcase's output marker file (not the implicit default `./showcase`). `exclude` stays, for carving out parts of included folders. The user's proposal (`in`, renamed `include`) from `01d-pre-p3-review.md` L5 | live |
+| D102 | **Modules receive only each theme's name, label and scheme** | `BuildContext.themes` is `Pick<ThemeDefinition, 'name' \| 'label' \| 'scheme'>[]` (was `Omit<ResolvedTheme, 'css'>[]`): the config `reference` may be a filesystem path and has no use in the browser, so the list is safe to embed as is (C2 rule 2). From `01d-pre-p3-review.md` L11 | live |
 
 ## 4. Open questions
 

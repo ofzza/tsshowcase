@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial correction (C2 review F42): A1's wording updated after D66 moved the config schemas to the CLI package; no change in scope. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -231,7 +231,7 @@ The template's three-way split, adapted:
   - **Gotchas and known issues** (§11);
   - **Continuous integration:** the workflow, Dependabot, and the branch-protection note;
   - **Packages:** one line per package linking to its README (which holds the export list; see §10).
-- **`CONTRIBUTE.md`** (contributors): reporting issues and the contribution workflow (linking the ofzza onboarding guides, as the template), branching, the project structure, and a **glossary**. The glossary is seeded now with the terms already in use: unit, showcase, showcased repo, rendering module, base package, theme, theme catalogue, region class, test runner, fixture, interface version.
+- **`CONTRIBUTE.md`** (contributors): reporting issues and the contribution workflow (linking the ofzza onboarding guides, as the template), branching, the project structure, and a **glossary**. The glossary is seeded now with the terms already in use: unit, showcase, showcased repo, rendering module, base package, theme, theme catalogue, shell (shadow root), test runner, fixture, interface version.
 - **`README.md`** (users): a short stub now (what tsshowcase is, "under construction", Development and Contributing sections). C13 writes the real one.
 - **Package READMEs:** the template's structure (§2).
 - **`PUBLISH.md`:** arrives with C14, mirroring the template's checklist (see "Recorded for later chunks").

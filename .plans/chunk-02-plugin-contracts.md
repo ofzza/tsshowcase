@@ -1,6 +1,6 @@
 # Chunk plan C2: Plugin contracts (`@ofzza/tsshowcase-api`)
 
-> Status: **APPROVED** (round 5, 2026-10-18); stays open only for C3 to fill the catalogue slot (§11, D28) ( review triage in `02a-c2-plan-review.md`). Decisions referenced as `D<n>` are in AGENTS.md §3. Stays open until the C3 plan is approved (C3 fills the catalogue slot, D28).
+> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -12,7 +12,7 @@ The sketches below are the **proposal under review**. They use real TypeScript s
 
 1. **Additive-only within a major (D13).** Every member added after 1.0 is optional and feature-detected. Every input and output object may gain fields. Consumers on both sides ignore fields they don't know.
 2. **Plain data across the boundary.** Everything the CLI hands to `build`/`dev` (the `ShowcaseData`) is JSON-serialisable: no functions, no `Map`s, no class instances, no `Date`s (ISO strings instead). Functions only appear on _context_ objects (`read()`, `loadTestRunner()`, subscriptions), never in data.
-3. **Repo-relative POSIX paths everywhere in data.** Absolute paths appear only on contexts and plugin outputs that never reach the browser (`repo.root`, `repoRoot`, `cacheDir`, `ThemeDefinition.css`). This keeps the user's filesystem layout out of the published showcase, and makes the data identical on Windows and Linux.
+3. **Repo-relative POSIX paths everywhere in data.** Absolute paths appear only on contexts and plugin outputs that never reach the browser (`repo.root`, `repoRoot`, `cacheDir`, `ThemeDefinition.css`, `BuildContext.themeStylesheets`). This keeps the user's filesystem layout out of the published showcase, and makes the data identical on Windows and Linux.
 4. **Directories are identities.** A package is identified by its directory (`'.'` for the root), a unit by its directory (D36: one unit per directory). No separate id scheme to keep in sync.
 5. **Rule violations are data, failures are exceptions.** `verify`/`analyze` return issues (D2). A module throws only for genuine failures (bugs, bad config, a crashed tool); the CLI catches, names the module, and reports.
 6. **The CLI owns cross-cutting behaviour once,** so each module doesn't reimplement it: severity overrides, output-dir guarding, file watching, markdown rendering, theme resolution.
@@ -146,7 +146,7 @@ export interface Doc {
 export interface DocHeading {
   readonly depth: 1 | 2 | 3 | 4 | 5 | 6;
   readonly text: string;
-  readonly id: string; // the element id C5 put on the heading
+  readonly id: string; // the element id C5 put on the heading; unique within this doc only (H36: modules look headings up within the doc's container)
 }
 ```
 
@@ -402,7 +402,7 @@ export interface RouteContext {
 // resolveRoute(target, ctx, heading?) → an in-app URL relative to the app's index.html (e.g. '#/button', '#/button?h=props'), or undefined (D78)
 ```
 
-- **Signature (D67):** `resolveRoute(target: RouteTarget, ctx: RouteContext, heading?: string): string`. Like every other method, it gets the analysis through its context, so a module never keeps the last analysis on `this` (unsafe when `dev` re-analyses while calls are in flight). This revises D35's `resolveRoute(target, heading?)`.
+- **Signature (D67):** `resolveRoute(target: RouteTarget, ctx: RouteContext, heading?: string): string | undefined` (`undefined` only for group targets, D78). Like every other method, it gets the analysis through its context, so a module never keeps the last analysis on `this` (unsafe when `dev` re-analyses while calls are in flight). This revises D35's `resolveRoute(target, heading?)`.
 - `heading` is a heading id from `Doc.headings` (C5 generates the ids, so the module and the markdown pipeline agree).
 - In a unit target, `package` is a convenience: it must be the unit's owning package.
 - The returned URL must work under any base path (D43 inclusion rules): relative, no leading `/`.
@@ -469,7 +469,8 @@ Paths: `TestFileResult.file` is always repo-relative, even when `TestRunOptions.
 ```ts
 export interface BuildContext {
   readonly data: ShowcaseData;
-  readonly themes: readonly ResolvedTheme[]; // in config order
+  readonly themes: readonly Omit<ResolvedTheme, 'css'>[]; // in config order: names, labels and schemes for the switcher and initial selection; no raw css (H37: modules include only themeStylesheets)
+  readonly themeStylesheets: { readonly shell: string; readonly fonts: string }; // B1, D82: absolute paths to the CLI-scoped stylesheets (§8 rule 3). Toolchain inputs: CSS with url()s relative to the file, pointing at source assets; the module emits those assets and rewrites the URLs (or passes a matching baseURL to constructed sheets) (H8, H35)
   readonly defaultTheme?: string; // explicit config choice; otherwise the inclusion rules decide (§8)
   readonly repoRoot: string; // absolute; to turn RepoPaths (showcase files) into imports
   readonly cacheDir: string; // absolute, module-private scratch space, persists across runs
@@ -490,6 +491,7 @@ export interface DevContext extends BuildContext {
   readonly port?: number;
   onDataUpdate(listener: (data: ShowcaseData) => void): Unsubscribe; // full snapshot each time (Q6)
   onTestUpdate(listener: (update: TestResultsUpdate) => void): Unsubscribe;
+  onThemeStylesheetsUpdate(listener: (sheets: { readonly shell: string; readonly fonts: string }) => void): Unsubscribe; // H7: new stylesheet CONTENTS after a theme file change (the files are also rewritten in place)
 }
 
 export interface DevSession {
@@ -505,7 +507,7 @@ export interface DevSession {
 - `data` already contains test results (or `not-run`/`unavailable`), README HTML and the tree.
 - In `dev`, test updates reach the dev server separately (`onTestUpdate`) so a test run doesn't force a full data push. The CLI also merges them into its own copy, so the next full `onDataUpdate` snapshot is consistent.
 - **Shutdown order** (Ctrl-C or a fatal error): the CLI aborts every `signal` (stopping analysis and test watching) → `DevSession.close()` → `dispose()`. A rejected `DevSession.closed` ends `dev` with the error.
-- Theme CSS edits in `dev` are the module's dev server's job (it watches the `css` files it was given). Changing which themes are configured needs a restart.
+- Theme CSS edits in `dev`: the CLI regenerates both `themeStylesheets` in place (D82); the module's dev server picks up those files. Changing which themes are configured needs a restart.
 
 ### 5.9 Call order per action
 
@@ -653,7 +655,7 @@ export interface ThemeSet {
 export interface ThemeDefinition {
   readonly name: string; // unique within a build; the value of the theme attribute (§8)
   readonly label?: string; // shown in the switcher; defaults to name
-  readonly scheme: 'light' | 'dark'; // drives the prefers-color-scheme default and `color-scheme` (D7, D44)
+  readonly scheme: 'light' | 'dark'; // drives the prefers-color-scheme default and `color-scheme` (D7, D82, D89)
   readonly css: readonly string[]; // absolute paths to the theme's CSS files, in cascade order; unscoped (see below)
 }
 
@@ -666,7 +668,9 @@ export interface ResolvedTheme extends ThemeDefinition {
 
 **Names and assets.** Two configured themes with the same `name` are a CLI error. `url()` references in theme CSS (fonts, images) resolve relative to their CSS file, and the build must bundle them into the output (§8 rule 2 bans third-party origins).
 
-**Theme CSS is unscoped; the build scopes it (D65).** A theme's CSS files must not reference the theme's own name or `THEME_ATTRIBUTE`. The build scopes each theme's files under its `name` (§8 rule 3). C3 decides the mechanics (how the scoping is applied, and which selector the unscoped files are written against) and everything about the variable hierarchy.
+**Theme CSS is unscoped; the CLI scopes it (D65, D82).** A theme's CSS files must not reference the theme's own name or `THEME_ATTRIBUTE`. The CLI turns all configured themes into a **shell stylesheet** (every theme wrapped in `:where(.tss-shell[data-theme="<name>"])`) and a **fonts stylesheet** (`@font-face` rules), handed over as `BuildContext.themeStylesheets` (mechanics: C3 plan §5).
+
+**What a theme may do (B1, D86, D89):** a theme only ever applies inside the shell's shadow root (§8 rule 7), so it may style anything there, including bare elements, and add its own variables, classes and selectors, within three rules: (1) no self-scoping and no document selectors (`[data-theme]`, `:host`, `html`, `body`, compound `:root`); (2) its own names (classes, variables, keyframes, font families) use its own prefix, never `tss-`/`--tss-`; (3) modules only use catalogue names in markup, plus their own prefixed arrangement-only classes, which themes never style. Documented with their purpose in "Building a theme that works with any module" (C3 §11). `@ofzza/tsshowcase-lint` offers presets that check them (D88).
 
 **Extending a theme is composition, not a contract feature (D65).** There is no `extends` field. A theme package that builds on another depends on it as an ordinary npm dependency (so npm resolution, pinned by its own range, picks the actual package) and puts the base theme's CSS files before its own overrides:
 
@@ -682,12 +686,12 @@ export default class OceanThemes implements ThemeSet {
 
   constructor(host: PluginHost) {
     const base = new DefaultThemes(host).themes.find((theme) => theme.name === 'default-light')!;
-    this.themes = [{ name: 'ocean', label: 'Ocean', scheme: 'light', css: [...base.css, fileURLToPath(new URL('./ocean.css', import.meta.url))] }];
+    this.themes = [{ name: 'ocean', label: 'Ocean', scheme: 'light', css: [...base.css, fileURLToPath(new URL('../css/ocean.css', import.meta.url))] }];
   }
 }
 ```
 
-`ocean.css` overrides only what it needs (e.g. the primary/secondary base tokens), and the variable hierarchy cascades it (C3). Config: `themes: ['my-ocean-theme']`, or mixed with built-ins. This only works because of the scoping rule above: self-scoped base files would keep targeting `default-light`. The `theme/` README documents the pattern (the sample is type-checked, D56). A CLI-resolved `extends` reference could still be added later, additively (D13), if composition proves clumsy.
+`css/ocean.css` lives outside `src/` (a pure `tsc` build doesn't copy CSS) and is published with `files: ["dist", "css"]`, as `-theme-default` does (G33). It overrides only what it needs (e.g. the primary/secondary base tokens), and the variable hierarchy cascades it (C3). Config: `themes: ['my-ocean-theme']`, or mixed with built-ins. This only works because of the scoping rule above: self-scoped base files would keep targeting `default-light`. The `theme/` README documents the pattern (the sample is type-checked, D56). A CLI-resolved `extends` reference could still be added later, additively (D13), if composition proves clumsy.
 
 ## 8. Output inclusion rules (`inclusion/`, D43)
 
@@ -698,16 +702,11 @@ Binding on **every** module's output, whether or not it uses `-base-vite`. Docum
 0. **The CLI alone writes the output (D64).** `build` returns the site as `BuildFile[]`; a module that writes the output directory itself breaks the contract.
 1. **Static and relocatable.** The returned files form a self-contained static site with `index.html` at its root. It works when served from any sub-path (GitHub Pages project sites): all URLs relative, routing needs no server rewrites (hash routing or equivalent).
 2. **No leaks.** No absolute filesystem paths from the build machine appear in the output. No runtime requests to third-party origins (fonts, CDNs, analytics) unless the user's own showcase code makes them.
-3. **Every configured theme is included,** each theme's (unscoped, §7) CSS scoped by the build under its `name`, and a theme is applied by setting `THEME_ATTRIBUTE` (`'data-theme'`) to its `name` on the `<html>` element (C3 confirms the element and the scoping mechanics).
-4. **Initial theme selection,** applied before first paint (no flash): the stored choice (`localStorage[THEME_STORAGE_KEY]`, `'tsshowcase:theme'`) if it names an included theme → else the configured `defaultTheme` → else the first theme whose `scheme` matches `prefers-color-scheme` → else the first theme. With only one theme, no switcher is rendered.
+3. **Every configured theme is included** (B1, D82, D89; **binding**, H34): the shell lives in a **shadow root** on a host element `SHELL_HOST_TAG` (`'tsshowcase-app'`); the module adopts the CLI's **shell stylesheet** (`BuildContext.themeStylesheets.shell`) into it **first**, then its own CSS (`adoptedStyleSheets = [themeShell, ...moduleSheets]`; a `<style>` fallback keeps the same order, never mixed), and adds the **fonts stylesheet** (`.fonts`) to the document. The module processes both files as toolchain inputs (emitting their assets, H8) and, in `dev`, applies `onThemeStylesheetsUpdate` contents. A theme is applied by setting `THEME_ATTRIBUTE` (`'data-theme'`) to its `name` on the shell root element (`tss-shell`) inside the shadow root; shell overlays render inside that element (H29). Theme CSS never applies to showcase content. Theme rules carry no scoping specificity (`:where()`), so the module's later CSS wins by order where both set a property. No cascade `@layer` (D81).
+4. **Initial theme selection,** applied before the shell first paints (no flash): the stored choice (`localStorage[THEME_STORAGE_KEY]`, `'tsshowcase:theme'`) if it names an included theme → else the configured `defaultTheme` → else the first theme whose `scheme` matches `prefers-color-scheme` (read once at start; later OS changes are ignored in v1, H16) → else the first theme. With only one theme, no switcher is rendered. **The page itself (H6):** the module sets `color-scheme` and the canvas background on `<html>` from the active theme (kept in sync on switch), and `index.html` ships `<meta name="color-scheme" content="light dark">` plus a tiny inline script applying this selection to `<html>` before the bundle loads; this is the only document-level styling besides the fonts stylesheet and the user's showcase stylesheets.
 5. **The switcher** stores the user's choice under `THEME_STORAGE_KEY` and uses the catalogue's switcher class (C3).
-6. **README HTML is inserted verbatim** inside an element carrying the catalogue's content region class (`tss-content`, D44). It is therefore fully themed: the region styles its bare elements (headings, paragraphs, links, tables, code, …) with the same classes' and variables' values the shell uses, and links and heading ids stay intact.
-7. **Showcases get the theme, but only on request (D44's three tiers).** Inside a showcase:
-   - **theme variables** (`--tss-…`) are inherited, so `var(--tss-…)` works and follows the active theme;
-   - **catalogue classes** (`tss-title`, `tss-link`, …) work on any element and look exactly as they do in the shell;
-   - **a region class** (`tss-content`) may be used to opt a subtree into themed bare elements, exactly like README content;
-   - **nothing else applies:** shell CSS never targets bare elements outside a region (no `p { … }`, no `.tss-nav a` reaching in), so a user's component that uses none of the above looks exactly as it does in the user's own app.
-   The theme's own rules enforce the last point (C3 stylelint, D44/D46); the module must not add CSS that breaks it. Anything beyond that (e.g. extra framework-level isolation) is the module's business.
+6. **README HTML is inserted verbatim** inside an element with the catalogue class `tss-content`, inside the shell (D89). It is themed like any native part of the shell: C5's HTML carries catalogue classes where an element needs one, and the theme styles the rest; links and heading ids stay intact.
+7. **Showcases are isolated from the shell (B1, D89; how is **free**, H34).** A showcase is never styled by the shell, and the shell's elements are never styled by a showcase's CSS, while the showcase's portals and overlays (modals, dropdowns, tooltips) keep working. Each showcase is rendered into a light-DOM wrapper `[data-tss-showcase]` that plays the role `body` plays in the user's app, and modules offer a **showcase stylesheet** option (document-level CSS where users put their app typography, e.g. `body, [data-tss-showcase] { … }`); with it a showcase looks as in the user's app (H1). Every showcase receives the selected colour scheme (`'light' | 'dark'`) through a **module-defined showcase interface** (for React, e.g. a `colorScheme` prop); the module pairs each showcase with its own light/dark selector (following the theme's `scheme` until changed manually; a theme switch resets it; not persisted, H12) and gives the stage a backdrop matching it (`data-scheme`). How isolation is achieved is the module's business; the **recommended technique** (used by `react-default`, specified in C3 §1): showcases are light-DOM wrappers assigned to named slots in their stage (`:host { all: initial !important }`, `slot { all: initial !important; display: contents !important; color-scheme: <selected> !important }`), with document scrolling and no clipping or containing-block properties on stage ancestors, and the host as a stacking context. A showcase may opt, as a whole, into rendering **inside** the shell to get the theme (only for components styled purely by catalogue classes and variables; needed for showcases of shell components, D41).
 
 ## 9. Issue model (`issues/`)
 
@@ -782,11 +781,11 @@ export function defineConfig(config: TsshowcaseConfig): TsshowcaseConfig; // ide
 
 ## 11. Theme catalogue slot (`catalogue/`, D28)
 
-C2 provides the **mechanism**; C3 fills in the names and documents the hierarchy.
+C2 provides the **mechanism**; C3 fills in the names and documents the hierarchy. **B1:** filled by the C3 plan §8: one `as const` metadata object (`catalogue`) from which `tssVar`, `tssClass` and **`tssData`** (ARIA/data attribute names and values for states and variants, D84) are derived; the reference docs are generated into this unit's README (D83). The sketch below shows the shape only.
 
 ```ts
 export const tssClass = {
-  content: 'tss-content', // region class (D44), needed by inclusion rule 6
+  content: 'tss-content', // README content container, needed by inclusion rule 6
   themeSwitcher: 'tss-theme-switcher', // needed by inclusion rule 5
   // … C3 adds the rest
 } as const;
@@ -802,7 +801,7 @@ export type TssVariableName = (typeof tssVar)[keyof typeof tssVar];
 export function cssVar(name: TssVariableName, fallback?: TssVariableName): string;
 ```
 
-A unit test asserts every class starts with `tss-` and every variable with `--tss-` (D45). C3 adds a test that the docs list exactly the exported names.
+A unit test asserts every class starts with `tss-` and every variable with `--tss-` (D45). C3 adds a test that the docs list exactly the exported names (`ci:catalogue`, D83).
 
 ## 12. Tests and contract guards
 
@@ -833,7 +832,7 @@ A unit test asserts every class starts with `tss-` and every variable with `--ts
 ## Recorded for later chunks
 
 - **C9:** the `check --format json` report shape (`reportVersion`, tool info, summary, repo-level issues, the directory tree with per-node status and issues), exported as types from the CLI package and documented in the CLI README. The round-1 sketch is in this file's git history.
-- **C3:** theme CSS is written unscoped and the build scopes it (D65); C3 designs the mechanics, the selector unscoped files are written against, and how `-base-vite` (C15) applies it. Theme extension is composition (D65), so C3 needs no extension mechanism, only docs for the pattern.
+- ✅ **C3:** theme CSS is written unscoped and the CLI scopes it (done: C3 plan §5, D82); theme extension is composition (D65).
 - **C11:** writing `BuildResult.files` (D64): path validation (relative, no `..`), the checkable inclusion rules (`index.html` present, no absolute build-machine paths), the output guard, an atomic swap into `outDir`, the marker file, and the written-files summary.
 - **C15:** `-base-vite` builds with `build.write: false` and maps the Rollup output (chunks and assets) to `BuildFile[]`.
 - **C5:** text docs (`Doc.format: 'text'`, D71) render as escaped `<pre>` with a catalogue class; link mapping per D73; heading collection into `Doc.headings`.

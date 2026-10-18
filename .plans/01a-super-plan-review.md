@@ -35,6 +35,8 @@ Its verdict: the docs are largely self-explanatory, with the main weak spot bein
 
 ## Deferred to chunk plans (recorded there as requirements or questions)
 
+> **Superseded as the working list (2026-10-18):** these points, plus everything recorded later, are consolidated in AGENTS.md → "Open points per chunk". Resolved here: C2's items (schema technology → D58/D62; JSON report → D60; per-package config → D59/D69); C3's items (default theme selection → C2 inclusion rule 4; user showcases and the theme rules → D46, D89).
+
 - C2: schema technology; whether the JSON report shape is contract or CLI detail; per-package config and exclusion in workspaces.
 - C3: how the default is picked when there are more than two themes; whether user showcase components are bound by the theme rules.
 - C4: whether workspace packages are scanned from the root or per package; Prettier handling of intentionally unparseable fixture files (they would fail `ci:prettier`; proposed in the C1 review, not yet decided); the `copyFixture()` test helper (specified in the C1 plan §5): its API and where it lives.

@@ -1,6 +1,6 @@
 # Chunk plan C3: Theme system + default themes
 
-> Status: **APPROVED** (round 6, 2026-10-18). Reworked after two fresh-eyes reviews (`03a-c3-plan-review.md`, `03b-c3-plan-review.md`) and the isolation redesign (D89: Shadow-DOM shell, light-DOM showcases). Decisions referenced as `D<n>` are in AGENTS.md §3. Approving this plan also closes the C2 plan (C3 fills its catalogue slot, D28).
+> Status: **APPROVED** (round 6, 2026-10-18). Post-approval, with the user's approval (checkpoint review `01b-checkpoint-review.md`): D92 (bare-element theme selectors only inside `.tss-content`) and the theme rules renumbered 1–4. **Re-approved 2026-10-18 (prototype spikes, `01c-spike-results.md`):** `isolation: isolate !important` and the `!important` rule for `:host`/`slot`, the showcase setup option, stacking and synthetic-event notes, `@font-face` wording. Reworked after two fresh-eyes reviews (`03a-c3-plan-review.md`, `03b-c3-plan-review.md`) and the isolation redesign (D89: Shadow-DOM shell, light-DOM showcases). Decisions referenced as `D<n>` are in AGENTS.md §3. Approving this plan also closes the C2 plan (C3 fills its catalogue slot, D28).
 
 ## Goal
 
@@ -37,7 +37,7 @@ Earlier rounds tried to share one document between the themed shell and the user
   - **portals:** modals, dropdowns and tooltips land in `document.body`, where the user's CSS applies and no theme CSS exists;
   - **no clipping**, given the layout rules below: showcases are real page content, so overlays float over the whole page.
 - **Inheritance across the boundary** (inheritance follows the flattened tree, so a slotted element inherits from its slot):
-  - the module's fixed shell CSS sets `:host { all: initial !important; display: block !important; }`: document rules beat `:host` rules unless they're `!important` (H2), and this stops a user's `body { font-family: … }` or `*`/`all: unset` resets from reaching the shell;
+  - the module's fixed shell CSS sets `:host { all: initial !important; display: block !important; isolation: isolate !important; }`: document rules beat `:host` rules unless they're `!important` (H2), and this stops a user's `body { font-family: … }` or `*`/`all: unset` resets from reaching the shell. **Every declaration after `all: initial !important` in `:host` and `slot` must carry `!important`**: a normal `isolation: isolate` there silently loses (verified in the spike, `01c-spike-results.md`);
   - the showcase slot gets `slot { all: initial !important; display: contents !important; color-scheme: <selected scheme> !important; }`, so the shell's typography and colours don't reach the showcase, while native controls follow the showcase's selected light/dark mode;
   - custom properties are not reset by `all`, so `var(--tss-…)` remains _available_ to a showcase's inline content.
 - **Typography is the showcase's own (H1).** Because the slot resets inheritance, a showcase doesn't inherit the user's `body` typography either; unstyled text would fall back to browser defaults (typically a serif). So:
@@ -48,10 +48,13 @@ Earlier rounds tried to share one document between the themed shell and the user
 - **Layout rules that keep showcases unclipped (H5):**
   1. the shell uses **document scrolling**: no scroll container on any ancestor of `tss-showcase-stage`;
   2. neither themes nor modules set `overflow` (other than `visible`), `transform`, `filter`, `backdrop-filter`, `contain`, `container-type` or `will-change` on stage ancestors (documented per class; linted where feasible);
-  3. the host establishes a stacking context (`isolation: isolate`), so the whole shell paints below body-level portals; `--tss-z-*` are relative to the shell.
+  3. the host establishes a stacking context (`isolation: isolate !important`), so the whole shell paints below body-level portals; `--tss-z-*` are relative to the shell and kept small, because **slotted** showcase content stacks inside the host's stacking context (a showcase's fixed/absolute element without a high z-index sits under the shell's sticky header).
 - **The stage** is themed (border, padding, and a backdrop matching the showcase's selected scheme via `data-scheme`, §4), so a showcase that sets no background of its own sits on a suitable light or dark backdrop.
 - **Colour scheme for showcases:** every showcase receives the selected scheme (`'light' | 'dark'`). Each module defines its showcase component interface (for React, e.g. `export default function Showcase({ colorScheme }: { colorScheme: 'light' | 'dark' })`) and pairs every showcase with its own light/dark selector (§10). The prop is the reliable channel: portalled content (in `body`) gets neither the slot's `color-scheme` nor the `--tss-*` variables (H10).
 - **Showcases of shell components** (our own D41 showcases of `-base-react` components) need the theme. They opt into rendering **inside** the shadow root instead of being slotted, as a whole-showcase switch (module-defined, e.g. `export const shell = true`). The opt-in is only for components styled purely by catalogue classes and variables: CSS a showcase imports lands in `document.head` and doesn't reach inside the shadow root (H11). For such a showcase the scheme selector sets the configured theme matching the selected scheme on its stage.
+- **Showcase setup (spike):** focus-management libraries that walk the light DOM break keyboard order between shell and showcases (verified with Fluent v9's Tabster; fixed by `window.__tabsterShadowDOMAPI = getShadowDOMAPI()` before any `FluentProvider` mounts). Modules therefore offer a **showcase setup** option, a document-level module run before showcases mount (React: `moduleOptions.showcaseSetup: './src/showcase.setup.ts'`), next to `showcaseStylesheets`; C13 documents the Fluent case.
+- **Synthetic events (spike):** React events from slotted showcases bubble to the shell's React ancestors (normal portal behaviour); the shell attaches no handlers on stage ancestors that react to them, or stops propagation at the stage boundary.
+- **Document custom properties** inherit into the shell (`all` doesn't reset them): a user's `--tss-*` on `:root` would reach any variable a theme doesn't define; themes define the full set on `.tss-shell`, so this only matters for incomplete themes (documented).
 - **Shell overlays** (e.g. a switcher dropdown) render inside the **`.tss-shell` element**, so they get the theme (H29); never into `document.body`.
 - **Document-level styles:** only (a) the host element's own box, (b) the **fonts stylesheet** (§5), (c) the user's showcase stylesheets, and (d) one documented exception for the page itself (H6): the module sets `color-scheme` and the canvas background on `<html>` from the active theme (kept in sync on switch), so scrollbars and the overscroll canvas follow a dark theme; the built `index.html` ships `<meta name="color-scheme" content="light dark">` and a tiny inline script applying rule 4's initial selection to `<html>` before the bundle loads, so there's no white flash.
 - **Headings and anchors (H9):** fragment navigation and `:target` don't reach shadow trees. The module's router scrolls to and focuses the heading named by the route inside the shadow root (looking it up within the doc's container, since heading ids are unique per doc only, H36) and marks it `aria-current="location"`, which themes style instead of `:target`.
@@ -77,15 +80,15 @@ Earlier rounds tried to share one document between the themed shell and the user
 A theme is just CSS, and it may style **anything inside the shell**:
 
 - set or override any catalogue variable, at any layer (§3);
-- style any catalogue class, and bare elements anywhere in the shell (only the shell lives in the shadow root);
+- style any catalogue class (with any selector built from them), and bare elements **inside `.tss-content`** (README prose) only (D92): elsewhere a bare-element rule (`nav ul li`, `button`) would couple the theme to one module's internal DOM, breaking "any theme with any module"; modules put a catalogue class on every element a theme may style;
 - **introduce its own variables, classes and selectors** when the catalogue isn't enough; a theme that composes this one (C2 §7) gets them too and can override them.
 
 Ideally the catalogue is enough for any theme; extending it is allowed, not expected. The rules, which keep themes interchangeable:
 
 1. **No self-scoping, no document selectors and nothing that reaches showcases:** no `[data-theme]`, `:host`, `:host()`, `:host-context()`, `html`, `body`, `slot`, `::slotted()` or `::part()` selectors, no compound `:root`, and no `color-scheme` declarations (they come from `ThemeDefinition.scheme`, H22). The CLI scopes (§5); the theme only ever applies inside the shell and never to showcase content (H4).
 2. **Own names use their own prefix,** never `tss-` / `--tss-`, which are reserved for the catalogue, so a future catalogue addition never collides with a theme's invention (e.g. `--ocean-wave-height`, `.ocean-ribbon`, `@keyframes ocean-pulse`, `font-family: 'Ocean Sans'`). Keyframe names always use the theme's own prefix (the catalogue defines none, H26).
-4. **Respect the layout rules of §1** (no clipping or containing-block properties on stage ancestors).
 3. **Modules only use catalogue names in their markup,** plus their own prefixed classes for arrangement only, which themes never style (G25). A theme's own classes are therefore useful in two places only: showcases rendered inside the shell, and raw HTML in READMEs (whether C5 passes raw HTML through, sanitised, is a C5 decision, H23).
+4. **Respect the layout rules of §1** (no clipping or containing-block properties on stage ancestors).
 
 These are contract rules for every theme (rules 1–4), documented each with its purpose in **"Building a theme that works with any module"** (§11). The `-lint` presets check them (§9); they're enforced on our own themes only (D46).
 
@@ -207,7 +210,7 @@ All four layers are declared on the **theme scope element**, the shell root `.ts
 Theme CSS is written **unscoped**: variables on `:root`, class rules plain (`.tss-title { … }`, `.tss-content a { … }`); `@font-face`, `@keyframes`, `@media`, `@supports` and `@container` are allowed. The CLI turns all configured themes into **two stylesheets**:
 
 - **the shell stylesheet**, which the module adopts into the shell's shadow root: every theme's rules, wrapped per theme;
-- **the fonts stylesheet**, which the module adds to the document: the themes' `@font-face` rules, because `@font-face` declared inside a shadow root is ignored by browsers.
+- **the fonts stylesheet**, which the module adds to the document: the themes' `@font-face` rules, because `@font-face` declared inside a shadow root is ignored by Chromium and Firefox (WebKit honours it; the document stylesheet works everywhere).
 
 ```css
 /* theme source (unscoped) */
@@ -320,7 +323,7 @@ One policy, two linters, shipped as the published **`@ofzza/tsshowcase-lint`**. 
 - **`design-values`:** banned in declarations: colour literals (hex, `rgb()`/`hsl()`/`oklch()`…, named colours other than `transparent`/`currentColor`), dimensions with units other than `0`, and bare numbers other than `0`/`1` outside the structural allow-list. Allowed: `var(--tss-…)` (and own-prefix variables, below), percentages, structural keywords, inside `calc()`/`color-mix()` unitless multipliers and percentages combined with variables, and the **structural allow-list (G8):** `fr` units (`1fr`, `minmax(…, 1fr)`), `100vh`/`100vw`/`100dvh`/`100svh`, ratio values in `aspect-ratio`, `deg` in multiples of 90 inside `rotate()`, numbers in `flex`/`flex-grow`/`flex-shrink`/`order`/`grid-row`/`grid-column`, `color-scheme` values (`light`, `dark`, `normal`) and the `all` keywords (`initial`, `inherit`, `unset`, `revert`), which the module's host and slot resets need (H24).
   - **Literal exception (G17):** literals are allowed only in declarations of catalogue variables whose layer is `base` (theme packages) and of the theme's own-prefix variables.
 - **`known-variables`:** every `--tss-…` variable used or declared must be a catalogue variable. Other variables only with an allowed prefix (option `ownPrefixes`); our packages configure none.
-- **`scoping`:** in theme CSS, no `[data-theme]`, `:host`, `:host()`, `:host-context()`, `html`, `body`, `slot`, `::slotted()`, `::part()` selectors, no compound `:root`, no `color-scheme` declarations (§2.1 rule 1); `overflow`/`transform`/`filter`/`contain`/`container-type`/`will-change` on the documented stage-ancestor classes are reported (§1 layout rules).
+- **`scoping`:** in theme CSS, bare type/universal/attribute selectors only under `.tss-content` (D92); no `[data-theme]`, `:host`, `:host()`, `:host-context()`, `html`, `body`, `slot`, `::slotted()`, `::part()` selectors, no compound `:root`, no `color-scheme` declarations (§2.1 rule 1); `overflow`/`transform`/`filter`/`contain`/`container-type`/`will-change` on the documented stage-ancestor classes are reported (§1 layout rules).
 - **`own-prefix`:** a theme's own classes, variables, `@keyframes` names and `font-family` names must not use `tss-` unless they are catalogue names (§2.1 rule 2).
 - **Escape hatch:** `/* stylelint-disable-next-line tsshowcase/design-values -- <reason> */`, with `reportDescriptionlessDisables: true`.
 
@@ -361,7 +364,7 @@ A **published** package of lint rules, plugins and presets. It contains no code 
 ## 11. Documentation
 
 - **Audiences (D83):** the `-api` `catalogue/` README is for people **writing** a theme or a module; the `-theme-default` README is for users **theming their showcase**; the `-lint` README is for plugin authors opting into our lint presets.
-- `catalogue/` README (generated parts, §8) plus **"Building a theme that works with any module"** (D86): the isolation model in one paragraph (§1: why a theme only ever styles the shell), the three rules of §2.1 each with its reason, and recommendations: start by composing `-theme-default`, override base tokens before semantic ones, keep WCAG AA contrast, use the `stylelintConfigs.theme` preset. C13's theme authoring guide expands it.
+- `catalogue/` README (generated parts, §8) plus **"Building a theme that works with any module"** (D86): the isolation model in one paragraph (§1: why a theme only ever styles the shell), the four rules of §2.1 each with its reason, plus D92 (bare elements only inside `.tss-content`), and recommendations: start by composing `-theme-default`, override base tokens before semantic ones, keep WCAG AA contrast, use the `stylelintConfigs.theme` preset. C13's theme authoring guide expands it.
 - AGENTS.md: the trigger row "added or renamed a catalogue name → `npm run catalogue`, update both default themes"; the gotchas (§3.5, reduced motion last, lint needs a build) and the D89 pitfalls (typography cut off at the slot, document rules vs `:host`, `rem` follows the user's root, clipping and stacking under shell ancestors, fragments and `:target` don't reach the shadow root, Vite doesn't watch `node_modules`).
 - `CONTRIBUTE.md` glossary: base token, derived scale, semantic token, component token, theme scope element, shell (shadow root), slotted showcase.
 
@@ -400,7 +403,7 @@ The shell/showcase rendering, scheme selector and switcher components (C10), ado
 
 ## Decisions (all resolved)
 
-- ✅ **Q1 What a theme styles (D86, revised by D89):** anything inside the shell, extending the catalogue if needed, within the three rules of §2.1.
+- ✅ **Q1 What a theme styles (D86, revised by D89, D92):** catalogue classes and README prose (bare elements inside `.tss-content` only), extending the catalogue if needed, within the four rules of §2.1.
 - ✅ **Q2 Cascade layers (D81):** none.
 - ✅ **Q3 Who scopes (D82):** the CLI, into a shell stylesheet and a fonts stylesheet.
 - ✅ **Q4 Lint tooling (D88):** the published `@ofzza/tsshowcase-lint`.

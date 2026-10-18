@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -17,6 +17,12 @@
   - C5: catalogue classes and `tssData`. C10: the shadow-root shell, slotted showcases, scheme selectors, the shell opt-in for D41 showcases, `-lint` presets. C11: the CLI cache, atomic writes, calls the transform, passes `themeStylesheets` (new edge C11 → C3). C13: `-lint` and the theme recommendation. C14: publishes `-lint` after `-api`. C15: adopts the shell stylesheet into the shadow root, adds the fonts stylesheet, `fs.allow` for the cache and theme assets, hot-reloads adopted stylesheets.
   - Stale text fixed: C2 section (`themeStylesheets`, inclusion, changelog from `0.1.0`), C13 changelog, C1's package list.
   - After the second C3 review (`03b-c3-plan-review.md`): C15's runtime API and C10's isolation duties made explicit (H28); C12's D89 acceptance and contrast smoke test (H33, H31); the `-base-vite`/`-base-react` rows and C10's showcases (H30).
+- **R3 (checkpoint review before wave P3, `01b-checkpoint-review.md`, D91–D93):**
+  - New "C2 CLI duties → chunk" checklist (K10); edge C6 → C4 and the C4 scanner/workspace-detection seam, C4 planned before C6 (K9); theme resolution split between C6 and C11 (K14).
+  - C10: React fallback for repos without React (D91). C11: `build [outDir]` (D93), `check` in the data assembly (K25). C5: group targets (D78).
+  - Stale text: C2 bullet (`onThemeStylesheetsUpdate`, `dispose`), C15 `dev()` line, C11 "Depends on", the P3 rationale, the closing note on contract gaps (K12).
+  - Open points for every remaining chunk now live in AGENTS.md ("Open points per chunk"). A "v1 cut line" review runs once all chunk plans are approved, before implementation (K21).
+  - Prototype spikes instead of gates (K17/K20, `01c-spike-results.md`): the in-process Vitest runner is proven (C7, D94) and the D89 technique is confirmed in Chromium, Firefox and WebKit, with fixes (C10, C13, C15, D95).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -65,8 +71,9 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `verify(dir, ctx)` → `{ ignored } | { issues[] }` (D2), receiving the file list plus lazy, cached accessors (D40);
     - `runTests(ctx)` (D3, D34, D42): the module calls `ctx.loadTestRunner(ref?)` (an explicit ref from config or the module default, otherwise auto-detection), runs or watches, maps the raw results to units, and returns them. In dev, it keeps pushing test updates to the CLI through `ctx` (D18);
     - `resolveRoute(target, ctx, heading?)` (D35, D67): the in-app URL for home, a package or a unit; the CLI stores routes in the data;
-    - `build(ctx)` and `dev(ctx)` (D43): the module builds the static app and returns it as files for the CLI to write (D64), or runs a dev server. `ctx` carries the assembled data, the themes (names, labels, schemes), the CLI-scoped `themeStylesheets` (D82) and (in dev) `onDataUpdate` / `onTestUpdate` subscriptions;
+    - `build(ctx)` and `dev(ctx)` (D43): the module builds the static app and returns it as files for the CLI to write (D64), or runs a dev server. `ctx` carries the assembled data, the themes (names, labels, schemes), the CLI-scoped `themeStylesheets` (D82) and (in dev) `onDataUpdate` / `onTestUpdate` / `onThemeStylesheetsUpdate` subscriptions;
     - `scaffold(ctx)` for `init` (D16): returns files for the CLI to write (D64);
+    - `dispose()` at the end of every action (D63);
     - module-specific options schema, as JSON Schema (D6, D58);
   - **Inclusion rules for any module's output** (D43): how the CLI-scoped theme stylesheets are included (D82), how the switcher attribute works, showcase isolation (D89), static/relocatable output with no leaks. Mandatory even for modules that don't use `-base-vite`. How the data is embedded is the module's business (D77).
   - **Issue model:** severity, message, file, rule id.
@@ -115,7 +122,9 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - always ignored: `.git`, `node_modules` and the configured output directory;
     - defined behaviour for non-git directories.
   - Lazy file content accessors.
-  - Workspace detection (npm, yarn and pnpm workspaces); single package = one package (D16).
+  - Workspace detection (npm, yarn and pnpm workspaces); single package = one package (D16). **A separate function** that C6 calls first, to find per-package config files (K9).
+  - **The scanner takes its exclusions as inputs:** `{ exclude, skippedPackages, outDir }`, resolved by C6 from the config (K9).
+  - Read tracking for `RepoFiles` / `DirectoryInput` (D40), so `dev` can invalidate (K10).
   - package.json info, licence detection (D12), root and package READMEs.
   - Git info: remote → host, default branch (D24), with a deterministic fallback for shallow clones, detached HEAD and a missing `origin/HEAD`.
   - Fixtures: a single-package repo, a workspace repo, and broken variants.
@@ -128,7 +137,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - unified/remark/rehype with GFM and heading slugs.
   - Emits only C3 catalogue classes (and `tssData` attributes where needed).
   - **Link rewriting:**
-    - unit README → in-app URL via the module's `resolveRoute` (D35);
+    - unit, package and group READMEs (and their directories) → in-app URLs via the module's `resolveRoute` (D35, D73, D78); a group without a route → the VCS host;
     - repo file → host URL template (GitHub/GitLab/Bitbucket, overridable, D24);
     - external links left untouched;
     - heading anchors (`#slug`, in-page or cross-README) rewritten via `resolveRoute(target, ctx, heading)` (D35, D67), since bare `#slug` collides with hash routing.
@@ -140,7 +149,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 ### C6 — Plugin loading + configuration (CLI core)
 
-- **Goal:** resolve and validate modules, themes and runners (runners on the module's behalf, D34), and the effective config.
+- **Goal:** resolve and validate modules, themes and runners (runners on the module's behalf, D34), and the effective config. For themes, C6 resolves references (D9, `#name`), loads and version-checks theme sets; C11 selects the configured themes, checks duplicate names and `defaultTheme`, and scopes (K14).
 - **Requirements:**
   - Reference resolution order: built-in name → npm package → path (D9).
   - TS loading via jiti.
@@ -152,7 +161,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Config file discovery (`tsshowcase.config.ts|js|json`), validated against that schema, merged with CLI flags (D6).
   - Per-package config files in workspace packages (D59): discovery (using C4's workspace detection), the restricted package schema, and merging over the root config; each package's merged `moduleOptions` validated against the module's `optionsSchema` and handed over as `PackageInput.options` (D69).
   - Validation of module options.
-- **Depends on:** C2.
+- **Depends on:** C2, C4 (workspace detection and scanner inputs, K9).
 
 ### C7 — Vitest test runner (`-testrunner-vitest`)
 
@@ -163,6 +172,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Watch mode that streams updates (D18).
   - `detect(repo)`: vitest in deps, `vitest.config.*`, a `test` block in `vite.config.*`, workspace/projects config (D42).
   - A failing test never throws (D8).
+  - **Proven by the spike (`01c-spike-results.md`, D94):** `createVitest` + the reporter API (`onTestRunStart`, `onTestModuleEnd`, `onTestRunEnd`), `vitest/node` resolved from the repo root via `createRequire`; supported range `^3.2 || ^4 || ^5`; restore `process.env` and `process.exitCode` after each run; "no tests" = completed; results carry `project` and `unhandledErrors`; no port/HMR isolation needed next to our Vite.
 - **Depends on:** C2.
 
 ### C8 — React base: Node side (`-base-react`)
@@ -204,7 +214,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Requirements:**
   - **React input to `-base-vite` (C15)** and `build`/`dev` implementations that call it:
     - `@vitejs/plugin-react`;
-    - react/react-dom **resolved and deduped from the showcased repo** (pitfall: duplicate React). The dedupe also covers module runtime files living in the CLI's `node_modules`, and the module's packages must not pull in their own React copy through peer auto-install;
+    - react/react-dom **resolved and deduped from the showcased repo**; a repo without React gets a React bundled with `-base-react` (D91) (pitfall: duplicate React). The dedupe also covers module runtime files living in the CLI's `node_modules`, and the module's packages must not pull in their own React copy through peer auto-install;
     - respects the repo's tsconfig paths;
   - **Base class `runTests`** (D42): `ctx.loadTestRunner` → run / watch → map raw results to units (by unit directory, incl. nested units, D36) → return / push via `ctx.reportTestUpdate`.
   - **App:**
@@ -214,7 +224,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `resolveRoute` implementation (D35);
     - theme switcher UI component (persistence and selection live in C15).
     - showcases of the `-base-react` components themselves (dogfooding, D41), using mock data.
-  - **Isolation (D89, C3 §1):** the `<tsshowcase-app>` host and its shadow root (theme shell stylesheet adopted first, then module CSS, via C15's runtime API; `:host { all: initial !important }`; host as a stacking context; document scrolling, no clipping on stage ancestors); each showcase portalled into a light-DOM `[data-tss-showcase]` wrapper assigned to a named slot in its stage (`slot { all: initial !important; display: contents !important; color-scheme }`); the `showcaseStylesheets` module option (document-level CSS for app typography, H1); every showcase gets a `colorScheme` prop (the React showcase interface) and its own light/dark selector (follows the theme until changed, reset on theme switch, not persisted) with `data-scheme` on the stage; a showcase can opt into rendering inside the shell (D41 showcases); shell overlays inside `.tss-shell`; `data-theme` rendered from C15's theme state; the router scrolls to and focuses route-targeted headings inside the shadow root (`aria-current="location"`); key events from shell inputs stopped at the host, the stage labelled from inside the shadow tree; the smoke render passes a scheme and feature-detects constructable stylesheets (`<style>` fallback). Before locking the technique, a throwaway browser spike is recommended while planning C10/C15.
+  - **Isolation (D89, C3 §1):** the `<tsshowcase-app>` host and its shadow root (theme shell stylesheet adopted first, then module CSS, via C15's runtime API; `:host { all: initial !important }`; host as a stacking context; document scrolling, no clipping on stage ancestors); each showcase portalled into a light-DOM `[data-tss-showcase]` wrapper assigned to a named slot in its stage (`slot { all: initial !important; display: contents !important; color-scheme }`); the `showcaseStylesheets` and `showcaseSetup` module options (document-level CSS for app typography, H1; a setup module run before showcases mount, e.g. Fluent's Tabster Shadow-DOM API, D95); `isolation: isolate !important` on the host and `!important` on every declaration after `all: initial !important`; no shell handlers reacting to synthetic events bubbled from showcases; every showcase gets a `colorScheme` prop (the React showcase interface) and its own light/dark selector (follows the theme until changed, reset on theme switch, not persisted) with `data-scheme` on the stage; a showcase can opt into rendering inside the shell (D41 showcases); shell overlays inside `.tss-shell`; `data-theme` rendered from C15's theme state; the router scrolls to and focuses route-targeted headings inside the shadow root (`aria-current="location"`); key events from shell inputs stopped at the host, the stage labelled from inside the shadow tree; the smoke render passes a scheme and feature-detects constructable stylesheets (`<style>` fallback). Before locking the technique, a throwaway browser spike is recommended while planning C10/C15.
   - **Only C3 classes and variables are used** (plus own-prefixed arrangement classes, D86); passes the `-lint` presets (`stylelintConfigs.module`, `eslintConfigs.module`); `tssData` for states.
   - Consumes the embedded data and the dev live channel provided by `-base-vite` (C15).
 - **Depends on:** C2 (data, test-result and live-channel shapes), C3, C5 (HTML shape), C7 (runner, for `runTests`), C8 (base and the module class), C15 (Vite helper).
@@ -223,28 +233,29 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** orchestration. The CLI assembles data and calls the module's `build`/`dev` (D43); it doesn't bundle anything itself.
 - **Requirements:**
-  - **Data assembly:** C4 scan → module `analyze` → module `runTests` (which uses C7) → C5 HTML (links via `resolveRoute`) → `module.build(ctx)` / `module.dev(ctx)`.
+  - **Data assembly:** C4 scan → module `analyze` → `verify` × every directory (the `check` prerequisite, D76) → module `runTests` (which uses C7) → C5 HTML (links via `resolveRoute`) → `module.build(ctx)` / `module.dev(ctx)`.
   - Theme resolution (several themes, D7); scoping all themes with C3's transform into a shell and a fonts stylesheet, written atomically to the CLI cache (`node_modules/.cache/tsshowcase/`), passed as `ctx.themeStylesheets`, regenerated in place on theme file changes in `dev` (D82).
   - **`build`:**
-    - output to `--out` (default `./showcase`);
+    - output to the positional `build [outDir]` (relative to the cwd), else config `outDir` (relative to the config file), default `./showcase` (D93);
     - **output guard:** refuse to write into a non-empty directory that tsshowcase didn't create (e.g. stdblox already has a `showcase/` source dir);
     - `--fail-on-test-failure` (D8); `--no-tests` (optional). The chunk plan decides whether "tests unavailable" (D42) also fails in strict mode, and whether test results are cached.
   - **Writing the output (D64):** the module returns the site as files; the CLI validates the paths, checks the checkable inclusion rules, and writes `--out` with the output guard, an atomic swap and a marker file (details: C2 plan, "Recorded for later chunks").
   - **`check` first (D76):** `build` and `dev` run the full `check` and print the report; errors fail `build` unless `--no-check` (config `check: false`); `dev` never fails on them.
   - **Group READMEs (D78):** a `README.md` in a group directory becomes `GroupNode.readme`.
   - **`dev`:** the CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).
-- **Depends on:** C5, C6, C7, C9, C10.
+- **Depends on:** C3, C5, C6, C7, C9, C10.
 
 ### C15 — Vite pipeline helper (`-base-vite`)
 
 - **Goal:** the reusable Vite build/dev pipeline that modules call (D43). Numbered C15 to avoid renumbering existing chunks.
 - **Requirements:**
-  - API: `build({ data, themes, plugins, entry, resolve… })` → files (`build.write: false`, D64) and `dev({ …, onDataUpdate, onTestUpdate })`.
+  - API: `build({ data, themes, plugins, entry, resolve… })` → files (`build.write: false`, D64) and `dev({ …, onDataUpdate, onTestUpdate, onThemeStylesheetsUpdate })`.
   - Data embedding as a virtual module; adopting the CLI's shell stylesheet into the shell's shadow root (constructable stylesheets, with hot reloading of adopted sheets in `dev`) and adding the fonts stylesheet to the document (D82, D89; no scoping here); the theme selection setup (`data-theme` on `.tss-shell`, `prefers-color-scheme` default, persisted choice), per the C2 inclusion rules.
   - `base: './'`; `server.fs.allow` for module runtime files, the CLI cache directory (theme stylesheets) and theme asset directories outside the repo root.
   - Dev server, HMR, and pushing data and test updates to the browser (D18).
   - **Runtime API (D89, H28):** framework-agnostic helpers that C10 (and other frameworks' modules) call: adopt the theme shell stylesheet plus module sheets into a given shadow root in order (with a `<style>` fallback), add the fonts stylesheet to the document, apply dev stylesheet updates (`replaceSync()` from `DevContext.onThemeStylesheetsUpdate`, forwarded over the live channel), theme state (`getInitialTheme()`, `setTheme()`, `subscribe()`), and the document-level `color-scheme`/canvas background plus the `index.html` meta and inline selection script.
   - Theme stylesheets are processed as toolchain inputs (`?inline`-style, emitting their assets; never `?raw`).
+  - Builds set `mode`/`NODE_ENV=production` explicitly (a test run may leave `NODE_ENV=development` behind; D94).
   - Framework-agnostic: no React knowledge.
 - **Depends on:** C2, C3.
 
@@ -264,6 +275,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Requirements:**
   - Root README (what tsshowcase is, quick start, CLI reference).
   - Per-package READMEs completed.
+  - Focus-management libraries and Shadow DOM (the Fluent/Tabster worked example, D95); stacking of slotted showcase content under the shell's z-indexed elements.
   - Module authoring guide (incl. the isolation model, D89), theme authoring guide (expanding "Building a theme that works with any module", D86), test-runner authoring guide; each points to the matching `@ofzza/tsshowcase-lint` preset (D88).
   - Interface changelog reviewed for the first `0.1.0` publish (D80).
 - **Depends on:** C11 (can run in parallel with C12).
@@ -284,6 +296,24 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **Dogfood docs site (D41):** a GitHub Pages workflow that runs `tsshowcase build` on this repo. The structure already exists from C1 onwards.
 - **Depends on:** C12, C13.
 
+## C2 CLI duties → chunk (K10)
+
+The C2 contract implies CLI-side behaviour beyond scanning and loading. Owners:
+
+| Duty | Chunk |
+| ---- | ----- |
+| Read tracking for `RepoFiles` / `DirectoryInput` (D40) | C4 |
+| Validating the analysis (unit dirs exist, inside their package and `unitRoot`, unique, known packages) and throwing a module error (D70) | C9 (shared helper, reused by C11) |
+| Severity overrides with per-package `rules`, deriving `Issue.package` (D70) | C9 (shared helper, reused by C11) |
+| Synthetic `module/error` issue when `verify` throws | C9 |
+| Building the hierarchy from flat units + `unitRoot` (groups, nesting, group READMEs) | C11 |
+| Defaulting units absent from `TestResults` | C11 |
+| `SOURCE_DATE_EPOCH` for `generatedAt` | C11 |
+| `revision` numbering and dropping out-of-order updates | C11 |
+| Shutdown order (abort signals → `DevSession.close()` → `dispose()`) | C11 (and C9 for `dispose` after `check`/`init`) |
+| Re-running `verify` in `dev` on read-tracked changes, re-analysis on `AnalysisResult.inputs` changes | C11 |
+| Theme selection, duplicate names, scoping, CLI cache and atomic writes (D82) | C11 |
+
 ## Dependency edges
 
 | Chunk | Depends on                                           |
@@ -293,7 +323,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 | C3    | C2 (theme manifest; fills the `-api` catalogue, D28) |
 | C4    | C2                                                   |
 | C5    | C2, C3                                               |
-| C6    | C2                                                   |
+| C6    | C2, C4 (workspace detection, scanner inputs; K9)    |
 | C7    | C2                                                   |
 | C8    | C2, C4 (fixtures)                                    |
 | C9    | C4, C6, C8                                           |
@@ -312,7 +342,7 @@ Plans are approved one at a time. "Parallel" means a group's members only depend
 | ---- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | P1   | **C1**                                          | Small; fixes the layout everything else refers to.                                                                                            |
 | P2   | **C2**, then **C3**                             | C2 is the critical, collaborative contract. C3 fills C2's catalogue, so the C2 plan stays open until C3 is approved.                          |
-| P3   | **C4, C5, C6, C7, C15** (any order or parallel) | Each depends only on C2/C3. Planning C7 early also prototypes the Vitest Node API, the least-known piece, before the contracts are locked in. |
+| P3   | **C4, C5, C6, C7, C15** (approved one at a time, in any order, except **C4 before C6**) | Each depends only on C2/C3 (C6 also on C4's seam, K9). Planning C7 early also explores the Vitest Node API, the least-known piece; since C2 is approved, a finding there means backtracking to C2. |
 | P4   | **C8**                                          | Needs C4's fixtures.                                                                                                                          |
 | P5   | **C9** and **C10** (parallel)                   | C9 needs C4, C6 and C8; C10 needs C3, C5, C7, C8 and C15. The loadable module class lives in C8, so they don't depend on each other.          |
 | P6   | **C11**                                         | Integrates C9 and C10.                                                                                                                        |
@@ -324,4 +354,4 @@ Plans are approved one at a time. "Parallel" means a group's members only depend
 `C1 → C2 → C4 → C6 → C8 → C9` gives a **usable `check` + `init` early**. The point (D29) is to **lock down the inputs** (scanning, analysis, the data model) against real code before they are shaped into a themed showcase app.
 Then `C3 → C5 → C7 → C15 → C10 → C11 → C12 → C13 → C14`. C3's implementation also extends `-api` with the catalogue constants.
 
-If implementation reveals a contract gap, we backtrack to the C2 plan, bump the interface changelog, and re-approve.
+If implementation reveals a contract gap, we backtrack to the C2 plan, edit it (in place before the first publish; with an `-api` changeset after it, D80), and re-approve.

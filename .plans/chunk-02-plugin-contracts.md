@@ -1,6 +1,6 @@
 # Chunk plan C2: Plugin contracts (`@ofzza/tsshowcase-api`)
 
-> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Editorial corrections from the checkpoint review (`01b-checkpoint-review.md`: `check` and `outDir` in the config sketch, the dev stylesheet bullet, inclusion constants, wording) and two decisions from it (D92 bare elements only inside `.tss-content`, D93 `build [outDir]`) were applied on 2026-10-18 with the user's approval. **Amendment B2 (prototype spikes, `01c-spike-results.md`) re-approved 2026-10-18:** test-runner contract additions (`project`, `unhandledErrors`, `repoRoot`, substring filters, process restore, no-tests = completed, best-effort `removed`) and rule 7's `!important`/setup-option/stacking/event notes. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -462,7 +462,7 @@ async runTests(ctx: TestContext) {
 
 In `watch` mode `runTests` resolves with the first complete result and keeps calling `reportTestUpdate` until `signal` aborts. (Renamed from D42's `ctx.onTestUpdate`: `on…` names are subscriptions elsewhere, and `DevContext.onTestUpdate` is the opposite direction, CLI → dev server.)
 
-Paths: `TestFileResult.file` is always repo-relative, even when `TestRunOptions.root` is a package directory.
+Paths: `TestFileResult.file` is always repo-relative, even when `TestRunOptions.root` is a package directory. **Deletions (B2):** after a `dev` re-analysis, the CLI's own watcher is the reliable source of removed test files; a runner's `removed` is best-effort (Vitest has no public unlink event).
 
 ### 5.8 `build` and `dev` (D43)
 
@@ -507,7 +507,7 @@ export interface DevSession {
 - `data` already contains test results (or `not-run`/`unavailable`), README HTML and the tree.
 - In `dev`, test updates reach the dev server separately (`onTestUpdate`) so a test run doesn't force a full data push. The CLI also merges them into its own copy, so the next full `onDataUpdate` snapshot is consistent.
 - **Shutdown order** (Ctrl-C or a fatal error): the CLI aborts every `signal` (stopping analysis and test watching) → `DevSession.close()` → `dispose()`. A rejected `DevSession.closed` ends `dev` with the error.
-- Theme CSS edits in `dev`: the CLI regenerates both `themeStylesheets` in place (D82); the module's dev server picks up those files. Changing which themes are configured needs a restart.
+- Theme CSS edits in `dev`: the CLI regenerates both `themeStylesheets` in place (D82) and pushes the new contents through `onThemeStylesheetsUpdate` (H7, D90); the module applies them (Vite doesn't watch the cache in `node_modules`). Changing which themes are configured needs a restart.
 
 ### 5.9 Call order per action
 
@@ -596,23 +596,27 @@ export interface RunnerRepoInput {
 
 export interface TestRunOptions {
   readonly root: string; // absolute; where to run the showcased repo's own tool
-  readonly files?: readonly RepoPath[]; // optional filter
+  readonly repoRoot: string; // absolute; results are reported relative to it (B2)
+  readonly files?: readonly string[]; // optional filter: substring patterns (Vitest semantics), not exact paths (B2)
   readonly signal: AbortSignal;
 }
 
 export interface RawTestReport {
   readonly status: 'completed' | 'error'; // 'error' = the runner itself failed (D42: units become 'unavailable')
   readonly error?: TestError;
-  readonly files: readonly TestFileResult[];
+  readonly files: readonly TestFileResult[]; // "no tests found" is status 'completed' with files: [] (B2)
+  readonly unhandledErrors?: readonly TestError[]; // errors not attached to a file, e.g. TS syntax errors that make type tests unreliable (B2)
 }
 
 export interface RawTestUpdate {
-  readonly files: readonly TestFileResult[]; // full replacement per listed file
-  readonly removed?: readonly RepoPath[];
+  readonly files: readonly TestFileResult[]; // full replacement per listed (file, project)
+  readonly removed?: readonly { readonly file: RepoPath; readonly project?: string }[]; // best-effort; the CLI's dev watcher is the reliable source of deletions (B2)
+  readonly unhandledErrors?: readonly TestError[];
 }
 
 export interface TestFileResult {
   readonly file: RepoPath;
+  readonly project?: string; // B2: the test tool's project name; a file can appear once per project, so identity is (file, project)
   readonly status: TestStatus;
   readonly durationMs?: number;
   readonly error?: TestError; // file-level failure (e.g. a syntax error); its tests are then absent
@@ -634,6 +638,8 @@ export interface TestError {
 ```
 
 - **Never throws on failing tests (D8).** A failing test is `status: 'failed'`. A runner that can't run at all returns `status: 'error'` rather than throwing, where it can.
+- **Leaves the process as it found it (B2):** a runner restores `process.env` and `process.exitCode` after every run (Vitest sets `NODE_ENV=development` and `exitCode = 1` on failures, which would turn a later `vite build` into a dev build and make `build` exit non-zero, against D8).
+- **No tests found** is `status: 'completed'` with no files, not an error (B2).
 - Type tests (`*.test-d.ts`, D38) appear as ordinary files and tests.
 - The runner knows nothing about units; the module maps (D42).
 
@@ -670,7 +676,7 @@ export interface ResolvedTheme extends ThemeDefinition {
 
 **Theme CSS is unscoped; the CLI scopes it (D65, D82).** A theme's CSS files must not reference the theme's own name or `THEME_ATTRIBUTE`. The CLI turns all configured themes into a **shell stylesheet** (every theme wrapped in `:where(.tss-shell[data-theme="<name>"])`) and a **fonts stylesheet** (`@font-face` rules), handed over as `BuildContext.themeStylesheets` (mechanics: C3 plan §5).
 
-**What a theme may do (B1, D86, D89):** a theme only ever applies inside the shell's shadow root (§8 rule 7), so it may style anything there, including bare elements, and add its own variables, classes and selectors, within three rules: (1) no self-scoping and no document selectors (`[data-theme]`, `:host`, `html`, `body`, compound `:root`); (2) its own names (classes, variables, keyframes, font families) use its own prefix, never `tss-`/`--tss-`; (3) modules only use catalogue names in markup, plus their own prefixed arrangement-only classes, which themes never style. Documented with their purpose in "Building a theme that works with any module" (C3 §11). `@ofzza/tsshowcase-lint` offers presets that check them (D88).
+**What a theme may do (B1, D86, D89):** a theme only ever applies inside the shell's shadow root (§8 rule 7), so it may style any catalogue class, bare elements **inside `.tss-content` only** (D92), and add its own variables, classes and selectors, within four rules (D86): (1) no self-scoping, no document selectors, nothing reaching showcases (`[data-theme]`, `:host`, `:host()`, `html`, `body`, `slot`, `::slotted()`, `::part()`, compound `:root`, `color-scheme`); (2) its own names (classes, variables, keyframes, font families) use its own prefix, never `tss-`/`--tss-`; (3) modules only use catalogue names in markup (a catalogue class on every element a theme may style), plus their own prefixed arrangement-only classes, which themes never style; (4) respect the shell's layout rules (C3 §1). Documented with their purpose in "Building a theme that works with any module" (C3 §11). `@ofzza/tsshowcase-lint` offers presets that check them (D88). A composing theme instantiates the base `ThemeSet` directly, without an `apiVersion` check; that's acceptable because npm resolution pins the base package to the range the composing theme declares (K28).
 
 **Extending a theme is composition, not a contract feature (D65).** There is no `extends` field. A theme package that builds on another depends on it as an ordinary npm dependency (so npm resolution, pinned by its own range, picks the actual package) and puts the base theme's CSS files before its own overrides:
 
@@ -702,11 +708,11 @@ Binding on **every** module's output, whether or not it uses `-base-vite`. Docum
 0. **The CLI alone writes the output (D64).** `build` returns the site as `BuildFile[]`; a module that writes the output directory itself breaks the contract.
 1. **Static and relocatable.** The returned files form a self-contained static site with `index.html` at its root. It works when served from any sub-path (GitHub Pages project sites): all URLs relative, routing needs no server rewrites (hash routing or equivalent).
 2. **No leaks.** No absolute filesystem paths from the build machine appear in the output. No runtime requests to third-party origins (fonts, CDNs, analytics) unless the user's own showcase code makes them.
-3. **Every configured theme is included** (B1, D82, D89; **binding**, H34): the shell lives in a **shadow root** on a host element `SHELL_HOST_TAG` (`'tsshowcase-app'`); the module adopts the CLI's **shell stylesheet** (`BuildContext.themeStylesheets.shell`) into it **first**, then its own CSS (`adoptedStyleSheets = [themeShell, ...moduleSheets]`; a `<style>` fallback keeps the same order, never mixed), and adds the **fonts stylesheet** (`.fonts`) to the document. The module processes both files as toolchain inputs (emitting their assets, H8) and, in `dev`, applies `onThemeStylesheetsUpdate` contents. A theme is applied by setting `THEME_ATTRIBUTE` (`'data-theme'`) to its `name` on the shell root element (`tss-shell`) inside the shadow root; shell overlays render inside that element (H29). Theme CSS never applies to showcase content. Theme rules carry no scoping specificity (`:where()`), so the module's later CSS wins by order where both set a property. No cascade `@layer` (D81).
+3. **Every configured theme is included** (B1, D82, D89; **binding**, H34): the shell lives in a **shadow root** on a host element `SHELL_HOST_TAG` (`'tsshowcase-app'`); the module adopts the CLI's **shell stylesheet** (`BuildContext.themeStylesheets.shell`) into it **first**, then its own CSS (`adoptedStyleSheets = [themeShell, ...moduleSheets]`; a `<style>` fallback keeps the same order, never mixed), and adds the **fonts stylesheet** (`.fonts`) to the document. The module processes both files as toolchain inputs (emitting their assets, H8) and, in `dev`, applies `onThemeStylesheetsUpdate` contents. Inclusion constants (`inclusion/`): `SHELL_HOST_TAG`, `THEME_ATTRIBUTE`, `THEME_STORAGE_KEY`, `SHOWCASE_WRAPPER_ATTRIBUTE` (`'data-tss-showcase'`), `SHOWCASE_SLOT_PREFIX` (`'tss-showcase-'`) (K16). A theme is applied by setting `THEME_ATTRIBUTE` (`'data-theme'`) to its `name` on the shell root element (`tss-shell`) inside the shadow root; shell overlays render inside that element (H29). Theme CSS never applies to showcase content. Theme rules carry no scoping specificity (`:where()`), so the module's later CSS wins by order where both set a property. No cascade `@layer` (D81).
 4. **Initial theme selection,** applied before the shell first paints (no flash): the stored choice (`localStorage[THEME_STORAGE_KEY]`, `'tsshowcase:theme'`) if it names an included theme → else the configured `defaultTheme` → else the first theme whose `scheme` matches `prefers-color-scheme` (read once at start; later OS changes are ignored in v1, H16) → else the first theme. With only one theme, no switcher is rendered. **The page itself (H6):** the module sets `color-scheme` and the canvas background on `<html>` from the active theme (kept in sync on switch), and `index.html` ships `<meta name="color-scheme" content="light dark">` plus a tiny inline script applying this selection to `<html>` before the bundle loads; this is the only document-level styling besides the fonts stylesheet and the user's showcase stylesheets.
 5. **The switcher** stores the user's choice under `THEME_STORAGE_KEY` and uses the catalogue's switcher class (C3).
 6. **README HTML is inserted verbatim** inside an element with the catalogue class `tss-content`, inside the shell (D89). It is themed like any native part of the shell: C5's HTML carries catalogue classes where an element needs one, and the theme styles the rest; links and heading ids stay intact.
-7. **Showcases are isolated from the shell (B1, D89; how is **free**, H34).** A showcase is never styled by the shell, and the shell's elements are never styled by a showcase's CSS, while the showcase's portals and overlays (modals, dropdowns, tooltips) keep working. Each showcase is rendered into a light-DOM wrapper `[data-tss-showcase]` that plays the role `body` plays in the user's app, and modules offer a **showcase stylesheet** option (document-level CSS where users put their app typography, e.g. `body, [data-tss-showcase] { … }`); with it a showcase looks as in the user's app (H1). Every showcase receives the selected colour scheme (`'light' | 'dark'`) through a **module-defined showcase interface** (for React, e.g. a `colorScheme` prop); the module pairs each showcase with its own light/dark selector (following the theme's `scheme` until changed manually; a theme switch resets it; not persisted, H12) and gives the stage a backdrop matching it (`data-scheme`). How isolation is achieved is the module's business; the **recommended technique** (used by `react-default`, specified in C3 §1): showcases are light-DOM wrappers assigned to named slots in their stage (`:host { all: initial !important }`, `slot { all: initial !important; display: contents !important; color-scheme: <selected> !important }`), with document scrolling and no clipping or containing-block properties on stage ancestors, and the host as a stacking context. A showcase may opt, as a whole, into rendering **inside** the shell to get the theme (only for components styled purely by catalogue classes and variables; needed for showcases of shell components, D41).
+7. **Showcases are isolated from the shell (B1, D89; how is **free**, H34).** A showcase is never styled by the shell, and the shell's elements are never styled by a showcase's CSS, while the showcase's portals and overlays (modals, dropdowns, tooltips) keep working. Each showcase is rendered into a light-DOM wrapper `[data-tss-showcase]` that plays the role `body` plays in the user's app, and modules offer a **showcase stylesheet** option (document-level CSS where users put their app typography, e.g. `body, [data-tss-showcase] { … }`); with it a showcase looks as in the user's app (H1). Every showcase receives the selected colour scheme (`'light' | 'dark'`) through a **module-defined showcase interface** (for React, e.g. a `colorScheme` prop); the module pairs each showcase with its own light/dark selector (following the theme's `scheme` until changed manually; a theme switch resets it; not persisted, H12) and gives the stage a backdrop matching it (`data-scheme`). How isolation is achieved is the module's business; the **recommended technique** (used by `react-default`, specified in C3 §1): showcases are light-DOM wrappers assigned to named slots in their stage (`:host { all: initial !important; display: block !important; isolation: isolate !important }`; **every declaration after `all: initial !important` must carry `!important`**, or it silently loses (B2, verified), `slot { all: initial !important; display: contents !important; color-scheme: <selected> !important }`), with document scrolling and no clipping or containing-block properties on stage ancestors, and the host as a stacking context. Modules also offer a **showcase setup** option: a document-level module run before showcases mount (Storybook-preview style), e.g. for libraries that manage document-wide focus and must be told about Shadow DOM (Fluent v9's Tabster: `window.__tabsterShadowDOMAPI = getShadowDOMAPI()`) (B2). Slotted content stacks inside the host's stacking context, so a showcase's fixed/absolute element without a high z-index sits under the shell's z-indexed elements; body portals paint above the shell. React synthetic events from slotted showcases bubble to the shell's React ancestors, so the shell attaches no handlers on stage ancestors that react to them. A showcase may opt, as a whole, into rendering **inside** the shell to get the theme (only for components styled purely by catalogue classes and variables; needed for showcases of shell components, D41).
 
 ## 9. Issue model (`issues/`)
 
@@ -755,10 +761,11 @@ export interface TsshowcaseConfig {
   moduleOptions?: { [key: string]: unknown }; // validated by the module's optionsSchema
   themes?: string | readonly string[]; // references, optionally '#name' (§7); default ['default-light', 'default-dark']
   defaultTheme?: string; // a theme name
-  outDir?: string; // build output, relative to the config file; default './showcase'
+  outDir?: string; // build output, relative to the config file; default './showcase'; the positional `build [outDir]` (relative to the cwd) wins (D93)
   exclude?: readonly string[]; // gitignore-style patterns, on top of .gitignore (e.g. 'fixtures/')
   rules?: { [ruleId: string]: Severity | 'off' };
   testRunners?: readonly string[]; // extra auto-detection candidates (D42)
+  check?: boolean; // false = --no-check (D76): build doesn't fail on check errors
   tests?: boolean; // false = --no-tests
   failOnTestFailure?: boolean; // D8 strict mode
   vcs?: { host?: VcsInfo['host']; webUrl?: string; defaultBranch?: string; fileUrlTemplate?: string }; // D24 overrides
@@ -834,8 +841,9 @@ A unit test asserts every class starts with `tss-` and every variable with `--ts
 - **C9:** the `check --format json` report shape (`reportVersion`, tool info, summary, repo-level issues, the directory tree with per-node status and issues), exported as types from the CLI package and documented in the CLI README. The round-1 sketch is in this file's git history.
 - ✅ **C3:** theme CSS is written unscoped and the CLI scopes it (done: C3 plan §5, D82); theme extension is composition (D65).
 - **C11:** writing `BuildResult.files` (D64): path validation (relative, no `..`), the checkable inclusion rules (`index.html` present, no absolute build-machine paths), the output guard, an atomic swap into `outDir`, the marker file, and the written-files summary.
-- **C15:** `-base-vite` builds with `build.write: false` and maps the Rollup output (chunks and assets) to `BuildFile[]`.
+- **C15:** `-base-vite` builds with `build.write: false` and maps the Vite build output (chunks and assets; Rolldown in Vite 8) to `BuildFile[]`.
 - **C5:** text docs (`Doc.format: 'text'`, D71) render as escaped `<pre>` with a catalogue class; link mapping per D73; heading collection into `Doc.headings`.
+- **C6/C11:** `dev` host and port flags and config keys (K8).
 - **C6:** `loadTestRunner` with `candidates`, throw on ambiguity, `undefined` when nothing matches (D74); `optionFlags` parsing, precedence, collisions and `--help` (D79).
 - **C11:** `check` before `build`/`dev`, `--no-check` / `check: false` (D76); group README lookup (`README.md` in group directories, D78); `onAnalysisUpdate` delivery to watch-mode `runTests` (D75).
 - **C6:** per-package options (D69): merge each package's `moduleOptions` over the root ones and validate every merged result against `optionsSchema`.

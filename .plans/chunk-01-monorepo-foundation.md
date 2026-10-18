@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Note: C3 later adds an eighth package, `-lint` (D88); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 

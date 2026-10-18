@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review before wave P3) pending approval. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -23,6 +23,9 @@
   - Stale text: C2 bullet (`onThemeStylesheetsUpdate`, `dispose`), C15 `dev()` line, C11 "Depends on", the P3 rationale, the closing note on contract gaps (K12).
   - Open points for every remaining chunk now live in AGENTS.md ("Open points per chunk"). A "v1 cut line" review runs once all chunk plans are approved, before implementation (K21).
   - Prototype spikes instead of gates (K17/K20, `01c-spike-results.md`): the in-process Vitest runner is proven (C7, D94) and the D89 technique is confirmed in Chromium, Firefox and WebKit, with fixes (C10, C13, C15, D95).
+- **R4 (review of all plans before wave P3, `01d-pre-p3-review.md`, D96–D99):**
+  - C8: a preliminary React showcase file format (D96). C10: finalises it; theme-owned breakpoints (D97); React resolved per showcased package (refines D91).
+  - L1–L3 recorded as known open issues (AGENTS §4); the rest as open points per chunk. The cut-line review stays after all plans (D98); C10 stays one chunk (D99); shell-mode showcases get no scheme selector (D100; C2 rule 7, C3 §1); `include` folders and the marker-file skip (D101; C2 §5.5, §10, C4, C6).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -119,11 +122,12 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Requirements:**
   - `.gitignore`-aware recursive walk:
     - nested `.gitignore` files and `.git/info/exclude`;
-    - always ignored: `.git`, `node_modules` and the configured output directory;
+    - always ignored: `.git`, `node_modules`, an explicitly configured output directory, and any directory holding tsshowcase's output marker file (D101);
+    - **`include` (D101):** paths and glob patterns (default the whole repo), the definitive boundary of check and build; everything outside them is ignored, and `.gitignore` and `exclude` still apply inside them. Repo metadata (manifests, READMEs, licences, workspace and config files) is read wherever it lives. `include` is the definitive boundary: units outside it are neither checked nor showcased, without an issue;
     - defined behaviour for non-git directories.
   - Lazy file content accessors.
   - Workspace detection (npm, yarn and pnpm workspaces); single package = one package (D16). **A separate function** that C6 calls first, to find per-package config files (K9).
-  - **The scanner takes its exclusions as inputs:** `{ exclude, skippedPackages, outDir }`, resolved by C6 from the config (K9).
+  - **The scanner takes its exclusions as inputs:** `{ include, exclude, skippedPackages, outDir }`, resolved by C6 from the config (K9).
   - Read tracking for `RepoFiles` / `DirectoryInput` (D40), so `dev` can invalidate (K10).
   - package.json info, licence detection (D12), root and package READMEs.
   - Git info: remote → host, default branch (D24), with a deterministic fallback for shallow clones, detached HEAD and a missing `origin/HEAD`.
@@ -183,6 +187,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - package.json `exports`/`main`/`types` → entry → follows `export *` and named re-exports → source directories;
     - maps built entries (`dist/…`) back to source (e.g. the `source` export condition, tsconfig `rootDir`/`outDir`, or a config override), since `dist` may not exist;
     - uses the showcased repo's own TypeScript if it has one;
+    - exports whose source lies outside their own package (npm dependencies, sibling workspace packages) are external re-exports, never units; units outside `include` are dropped (D101);
     - classifies exports by kind (component / hook / function / class / constant / type), as needed by the D37 showcase rules.
   - **Base rules (D21):**
     - every exported unit has its own directory;
@@ -193,6 +198,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Opt-in `headless` preset (D47): `useX` holds the logic and prop getters, `renderX` is a pure presentation function, and `X` only wires the two.
   - Rule ids and configurable severities.
   - Scaffold templates (README, test, showcase stubs). The templates also keep showcase files out of the user's library build and published package.
+  - **A preliminary showcase file format (D96):** naming, the default-export signature (`{ colorScheme }`), the `shell` opt-in, several showcases per unit; C10 finalises it.
 - **Depends on:** C2, C4 (fixtures).
 
 ### C9 — CLI shell + `check` + `init`
@@ -225,6 +231,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - theme switcher UI component (persistence and selection live in C15).
     - showcases of the `-base-react` components themselves (dogfooding, D41), using mock data.
   - **Isolation (D89, C3 §1):** the `<tsshowcase-app>` host and its shadow root (theme shell stylesheet adopted first, then module CSS, via C15's runtime API; `:host { all: initial !important }`; host as a stacking context; document scrolling, no clipping on stage ancestors); each showcase portalled into a light-DOM `[data-tss-showcase]` wrapper assigned to a named slot in its stage (`slot { all: initial !important; display: contents !important; color-scheme }`); the `showcaseStylesheets` and `showcaseSetup` module options (document-level CSS for app typography, H1; a setup module run before showcases mount, e.g. Fluent's Tabster Shadow-DOM API, D95); `isolation: isolate !important` on the host and `!important` on every declaration after `all: initial !important`; no shell handlers reacting to synthetic events bubbled from showcases; every showcase gets a `colorScheme` prop (the React showcase interface) and its own light/dark selector (follows the theme until changed, reset on theme switch, not persisted) with `data-scheme` on the stage; a showcase can opt into rendering inside the shell (D41 showcases); shell overlays inside `.tss-shell`; `data-theme` rendered from C15's theme state; the router scrolls to and focuses route-targeted headings inside the shadow root (`aria-current="location"`); key events from shell inputs stopped at the host, the stage labelled from inside the shadow tree; the smoke render passes a scheme and feature-detects constructable stylesheets (`<style>` fallback). Before locking the technique, a throwaway browser spike is recommended while planning C10/C15.
+  - **Responsive layout (D97):** breakpoints live in theme CSS, which overrides layout tokens in its own media queries; module CSS has no length-based media queries. The needed tokens and missing catalogue classes come as a C3 amendment.
   - **Only C3 classes and variables are used** (plus own-prefixed arrangement classes, D86); passes the `-lint` presets (`stylelintConfigs.module`, `eslintConfigs.module`); `tssData` for states.
   - Consumes the embedded data and the dev live channel provided by `-base-vite` (C15).
 - **Depends on:** C2 (data, test-result and live-channel shapes), C3, C5 (HTML shape), C7 (runner, for `runTests`), C8 (base and the module class), C15 (Vite helper).

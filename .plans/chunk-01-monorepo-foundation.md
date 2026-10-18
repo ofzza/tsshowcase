@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Note: C3 later adds an eighth package, `-lint` (D88); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Amendment A3 (from C4 planning: the private `-test` package, fixture ignore rules; D104, D109, D107) re-approved 2026-10-18 with the C4 plan; see the end of this file. Note: C3 later adds an eighth package, `-lint` (D88), and C4 a private ninth, `-test` (D104); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -33,6 +33,7 @@ packages/
   tsshowcase-base-vite/                   @ofzza/tsshowcase-base-vite
   tsshowcase-base-react/                  @ofzza/tsshowcase-base-react
   tsshowcase-module-react-default/        @ofzza/tsshowcase-module-react-default
+  tsshowcase-test/                        @ofzza/tsshowcase-test             (private, added by C4: test helpers, A3)
 scripts/
   fixtures.mjs                 install / clean the fixtures' own dependencies
   readme-samples.mjs           type-checks the ts/tsx code samples in every README (§10)
@@ -89,6 +90,7 @@ packages/<pkg>/
 | `-base-react`           | `-api`, `-base-vite`                                                                                      |
 | `-module-react-default` | `-api`, `-base-react`                                                                                     |
 | CLI                     | `-api`, `-theme-default`, `-testrunner-vitest`, `-module-react-default` (built-ins reachable by name, D9) |
+| `-test` (private, A3)   | –; a `devDependency` of the packages whose tests use it, never a project reference (references cover runtime dependencies only) |
 
 Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in C1. Each chunk adds its own. Build, lint and test tooling lives in the root `devDependencies` only.
 
@@ -148,14 +150,14 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
 - `fixtures/<name>/` is a self-contained showcased repo with its own `package.json`. Where it needs real deps (`react`, `vitest`), it also has its own committed `package-lock.json`.
 - **Isolated from the workspace:**
   - not in `workspaces` (that only lists `packages/*`), so no hoisting into or out of it;
-  - excluded from ESLint, the TS configs and the Vitest projects. Prettier skips only their `node_modules`, so fixture sources are still formatted.
+  - excluded from ESLint, the TS configs and the Vitest projects. Prettier skips only their `node_modules` and the intentionally broken `fixtures/broken-*/` fixtures (A3), so fixture sources are still formatted.
 - `scripts/fixtures.mjs install` runs `npm ci` in every fixture that has a lockfile. `clean` removes their `node_modules`. CI runs `fixtures:install` before tests.
 - **Known gotcha: fixtures live inside this repo.** Run in place, a fixture sees this repo's state, which breaks three kinds of test:
   1. **A missing dependency still gets found.** Node resolves packages by walking _up_ the directory tree, so a fixture without `react`, `typescript` or `vitest` still finds the copy in this repo's root `node_modules`. A fixture's _own_ copies are fine, because the nearest `node_modules` wins. Affects:
      - "React must resolve from the showcased repo, with a clear error when it has none" (C10);
      - "use the showcased repo's own TypeScript" (C8);
      - "no Vitest installed → tests unavailable" (C7).
-  2. **Git state leaks in.** Scanning and git info (C4) would find this repo's `.git` and root `.gitignore`. That makes "not a git repo", a GitLab/Bitbucket/missing remote, a detached HEAD, a shallow clone and a missing `origin/HEAD` untestable. Nested `.git` directories can't be committed either.
+  2. **Git state leaks in.** (A3: since C4 reads no `.gitignore` above the scan root and uses no git at all (D103, D110), this no longer affects C4; it stays relevant to any later chunk that touches git.) Scanning and git info (C4) would find this repo's `.git` and root `.gitignore`. That makes "not a git repo", a GitLab/Bitbucket/missing remote, a detached HEAD, a shallow clone and a missing `origin/HEAD` untestable. Nested `.git` directories can't be committed either.
   3. **Tests that write files.** `init` writes stub files (C8/C9). `build` writes an output dir (C11), and its output guard needs a non-empty directory tsshowcase didn't create. These tests must not change the committed fixtures, or collide with each other when run in parallel.
 - **The fix: a test-only `copyFixture(name, options) → { dir, cleanup }` helper, specified and implemented in C4** (the first chunk whose tests need it):
   - copies `fixtures/<name>/` into a fresh temp directory under `os.tmpdir()`. Nothing above it has a `node_modules` or `.git`, so a missing dependency really is missing;
@@ -163,16 +165,18 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
   - optional `git` settings: `git init` plus a commit, then set up the state the test needs (remote URL or none, branch name, detached HEAD, no `origin/HEAD`, …);
   - `cleanup()` removes the temp directory (called from `afterEach`).
   - Tests that only read a fixture and are unaffected by the three cases above may use `fixtures/<name>/` in place.
-  - C4 also decides where the helper lives (e.g. a private, never-published test-utils workspace package).
+  - It lives in the private `-test` package (C4, D104; A3).
 - C1 ships only `fixtures/README.md` describing this. The first fixtures arrive with C4.
-- When `tsshowcase check` dogfoods this repo (C9), `fixtures/` must be excluded via this repo's tsshowcase config. Recorded for C9.
+- When `tsshowcase check` dogfoods this repo (C9), `fixtures/` is ignored via this repo's config `ignore: ['/fixtures/']` (D107). Recorded for C9.
+- **Fixture ignore rules (A3, D109):** fixtures carry their own ignore rules in `.tsshowcaseignore` files, which this repo's git doesn't apply, so everything in a fixture gets committed. Fixture content this repo's own `.gitignore` would catch (e.g. a fixture `dist/`) is re-included with `!` rules, at the root, in `fixtures/.gitignore` or in the fixture itself.
 
 ### 6. Versioning: changesets (D31)
 
 - `@changesets/cli` with `.changeset/config.json`:
   - `access: public`, `baseBranch: develop`;
   - independent versioning (no `fixed` or `linked` groups);
-  - `updateInternalDependencies: patch`.
+  - `updateInternalDependencies: patch`;
+  - `privatePackages: { version: false, tag: false }`, so the private `-test` package is never versioned or tagged (A3).
 - No publish automation (D33: a manual publish script arrives in C14).
 - **Open for C14:** the `source` export condition points at `src/`, which isn't packed. The C14 pack step either strips the condition or also packs `src/`. The C14 smoke test catches either mistake.
 
@@ -312,7 +316,7 @@ Contracts (C2), theme design and stylelint (C3), all runtime dependencies, React
   - the consumer smoke test type-checks each packed package under **both** `nodenext` and `bundler` resolution, and imports it at runtime (as the template's PUBLISH.md does);
   - a `prepublishOnly` guard so a failing build is never published;
   - `PUBLISH.md` mirroring the template's checklist: clean and synced `develop`, green CI, docs match code, `npm pack --dry-run` contents, unused version, `npm whoami`, fast-forward `master` to `develop`, publish from `master`, prerelease dist-tags, 2FA (`--otp`, generated fresh because `prepublishOnly` runs first), and first-publish registry 404 caching.
-- **C9:** exclude `fixtures/` from this repo's own `tsshowcase check`.
+- **C9:** ignore `fixtures/` in this repo's own `tsshowcase check` (config `ignore: ['/fixtures/']`, D107).
 - **C10:** the showcase smoke-render test (§10c).
 
 ## Amendment A1: JSON schemas with tsschema sidecars (D58, D62), re-approved
@@ -335,6 +339,13 @@ Raised during C2 planning:
 - **No changesets before the first publish.** The PR changeset check is wired in C1 but disabled (e.g. behind a `if: false` / an env switch, documented in AGENTS.md); C14 switches it on after the first publish.
 - AGENTS.md gotchas gain: "before 1.0, a breaking change uses a **minor** changeset; a major changeset on a `0.x` package jumps to `1.0.0`".
 - Acceptance criterion 7 (`npx changeset status` works) is unchanged.
+
+## Amendment A3: the `-test` package and fixture ignore rules (D104, D107, D109), re-approved
+
+Raised during C4 planning (`04a-c4-plan-review.md` M2, M4, N15):
+
+- **Package:** a private `packages/tsshowcase-test/` (`@ofzza/tsshowcase-test`, `private: true`, never published) built from the §2 skeleton; it holds `copyFixture()` and `fixturePath()` (specified in C4 §11.1), is a `devDependency` only (no project reference), and skips itself from this repo's dogfood `check` with its own `tsshowcase.config.json` (`{ "skip": true }`, D59). §1, §2 and §6 (changesets `privatePackages`) updated in place.
+- **Fixtures (§5):** their own ignore rules go in `.tsshowcaseignore` files (D109); fixture content this repo's `.gitignore` would catch is re-included with `!` rules; `fixtures/broken-*/` is excluded from Prettier; gotcha 2 annotated (C4 uses no git and no parent `.gitignore`); the C9 self-check uses config `ignore` (D107).
 
 ## Resolved questions
 

@@ -1,6 +1,6 @@
 # Chunk plan C2: Plugin contracts (`@ofzza/tsshowcase-api`)
 
-> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Editorial corrections from the checkpoint review (`01b-checkpoint-review.md`: `check` and `outDir` in the config sketch, the dev stylesheet bullet, inclusion constants, wording) and two decisions from it (D92 bare elements only inside `.tss-content`, D93 `build [outDir]`) were applied on 2026-10-18 with the user's approval. **Amendment B2 (prototype spikes, `01c-spike-results.md`) re-approved 2026-10-18:** test-runner contract additions (`project`, `unhandledErrors`, `repoRoot`, substring filters, process restore, no-tests = completed, best-effort `removed`) and rule 7's `!important`/setup-option/stacking/event notes. **Amendment B3 (review before wave P3, `01d-pre-p3-review.md`) re-approved 2026-10-18 with super-plan R4:** rule 7, shell-mode showcases get no scheme selector (D100); §5.5 and §10, `include` and the marker-file skip (D101); §5.8, `BuildContext.themes` narrowed to name, label and scheme (D102). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Editorial corrections from the checkpoint review (`01b-checkpoint-review.md`: `check` and `outDir` in the config sketch, the dev stylesheet bullet, inclusion constants, wording) and two decisions from it (D92 bare elements only inside `.tss-content`, D93 `build [outDir]`) were applied on 2026-10-18 with the user's approval. **Amendment B2 (prototype spikes, `01c-spike-results.md`) re-approved 2026-10-18:** test-runner contract additions (`project`, `unhandledErrors`, `repoRoot`, substring filters, process restore, no-tests = completed, best-effort `removed`) and rule 7's `!important`/setup-option/stacking/event notes. **Amendment B3 (review before wave P3, `01d-pre-p3-review.md`) re-approved 2026-10-18 with super-plan R4:** rule 7, shell-mode showcases get no scheme selector (D100); §5.5 and §10, `include` and the marker-file skip (D101); §5.8, `BuildContext.themes` narrowed to name, label and scheme (D102). **Amendment B4 (C4 planning, `04a-c4-plan-review.md`) re-approved 2026-10-18 with the C4 plan and super-plan R5:** §4 `VcsInfo` without `defaultBranch`, `{path}` the only template placeholder (D110); §5.3/§5.5 `read`/`exists`/`list` treat ignored paths as nonexistent unless `{ ignored: true }`, `.git`/`node_modules` never reachable, `DirectoryListing` of `DirectoryEntry` descriptors, lexical root boundary (D108); §5.4/§5.5 "every scanned directory" and the scan rules (D103, D109); §10 `include` → `scope`, `exclude` → `ignore`, `vcs` keys (D107, D110). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -107,8 +107,7 @@ export interface VcsInfo {
   readonly kind: 'git';
   readonly host: 'github' | 'gitlab' | 'bitbucket' | 'other';
   readonly webUrl?: string; // e.g. https://github.com/ofzza/tsshowcase
-  readonly defaultBranch?: string;
-  readonly fileUrlTemplate?: string; // resolved D24 template, e.g. '{webUrl}/blob/{branch}/{path}'
+  readonly fileUrlTemplate?: string; // resolved file-link template; `{path}` (relative to the repo root) is the only placeholder, e.g. 'https://github.com/o/r/blob/HEAD/{path}' (D110: links always use HEAD; no git)
 }
 
 export interface PackageNode {
@@ -274,21 +273,34 @@ Rationale (D63): **only `analyze` is required**, because every action starts wit
 ### 5.3 Shared context pieces
 
 ```ts
-/** Lazy, cached, read-only view of the repo (D40). Paths are repo-relative; a path resolving outside the repo root is rejected. The CLI records reads for dev invalidation. */
+/** Lazy, cached, read-only view of the repo (D40). Paths are repo-relative; the boundary is lexical (a path normalising outside the repo root is rejected; symlinks are followed). The CLI records reads for dev invalidation. */
 export interface RepoFiles {
-  read(path: RepoPath): Promise<string>; // utf-8; rejects if missing
-  exists(path: RepoPath): Promise<boolean>;
-  list(dir: RepoPath): Promise<DirectoryListing>; // non-ignored entries only
+  read(path: RepoPath, options?: AccessOptions): Promise<string>; // utf-8; rejects if missing (or ignored, unless options.ignored)
+  exists(path: RepoPath, options?: AccessOptions): Promise<boolean>; // false for an ignored path unless options.ignored
+  list(dir?: RepoPath, options?: AccessOptions): Promise<DirectoryListing>; // omitted = the root; non-ignored entries unless options.ignored; an ignored dir rejects as missing
 }
 
-// `list` is the gitignore-aware view of the repo for everything outside `verify` (runner `detect`, convention-based `analyze`, `scaffold`);
-// plain `fs` would descend into ignored directories and bypass dev read tracking.
+/** D108: by default an ignored path doesn't exist. `ignored: true` sees ignored paths too, except `.git` and `node_modules`, which are never reachable. */
+export interface AccessOptions {
+  readonly ignored?: boolean;
+}
+
+// One rule for every access method (D108): ignored = nonexistent, unless explicitly asked for.
+// `list` is the discovery view for everything outside `verify` (runner `detect`, convention-based `analyze`, `scaffold`); consumers that
+// discover files should not pass `ignored: true` casually (they would find e.g. units in `dist/`). Plain `fs` would also bypass dev read tracking.
 // No `readJson`: manifests are already in `PackageInfo.raw`, tsconfig files are JSONC, and `JSON.parse(await read(p))` is trivial.
 // It can be added later as an optional member (D13); it could never be removed.
 
 export interface DirectoryListing {
-  readonly files: readonly string[]; // names, not paths
-  readonly directories: readonly string[];
+  readonly entries: readonly DirectoryEntry[]; // sorted by name (UTF-16 code units)
+}
+
+export interface DirectoryEntry {
+  readonly name: string; // a name, not a path
+  readonly type: 'file' | 'directory'; // of the link target for symlinks; other entry kinds are never listed
+  readonly symlink: boolean; // symlinked directories are listed but never walked by the scan
+  readonly ignored: boolean; // only ever true with `ignored: true`
+  readonly reason?: 'output' | 'skipped' | 'ignore' | 'ignore-file'; // set when ignored: output dir/marker, skipped package, config `ignore`, .gitignore/.tsshowcaseignore
 }
 
 /** The repo as scanned by the CLI (C4), before the module has said anything about units. */
@@ -349,13 +361,13 @@ export interface AnalyzedUnit {
 
 **Repo-level verification is covered by `analyze` returning issues**, rather than a separate hook. Each issue may carry a `dir` (attached to that directory in the report) or none (shown at repo/package level, using `package` when set). One pass, no duplicated analysis.
 
-**Omitting a package (D72).** A module that wants a package visible without units returns it with `units: []` (its README and licence still get a page). A package left out of `packages` entirely is **hidden** from the showcase: it is absent from `ShowcaseData.packages`. `check` still visits its directories (the report covers every non-ignored directory); whether they pass is up to `verify`.
+**Omitting a package (D72).** A module that wants a package visible without units returns it with `units: []` (its README and licence still get a page). A package left out of `packages` entirely is **hidden** from the showcase: it is absent from `ShowcaseData.packages`. `check` still visits its directories (the report covers every scanned directory: in `scope`, not ignored); whether they pass is up to `verify`.
 
 **The CLI validates the analysis (D70).** A unit directory that doesn't exist, lies outside its package or its `unitRoot`, or appears twice, and a `PackageAnalysis.dir` that isn't a known package, are module bugs: the CLI throws an error naming the module.
 
 ### 5.5 `verify` (D2, D40)
 
-Called for **every non-ignored directory** of the repo (requirement), after `analyze`.
+Called for **every scanned directory** of the repo (in `scope`, not ignored; the requirement's "sans any ignored via .gitignore"), after `analyze`.
 
 ```ts
 export interface DirectoryInput {
@@ -363,9 +375,9 @@ export interface DirectoryInput {
   readonly package?: RepoPath; // the nearest package directory that owns it, if any
   readonly files: readonly string[]; // own listing, eager (every verify needs it): names in this directory, non-ignored
   readonly directories: readonly string[]; // names of non-ignored subdirectories
-  read(path: string): Promise<string>; // lazy and cached (D40)
-  exists(path: string): Promise<boolean>;
-  list(path?: string): Promise<DirectoryListing>; // omitted = this directory (same as files/directories)
+  read(path: string, options?: AccessOptions): Promise<string>; // lazy and cached (D40); same ignore rule as RepoFiles (D108)
+  exists(path: string, options?: AccessOptions): Promise<boolean>;
+  list(path?: string, options?: AccessOptions): Promise<DirectoryListing>; // omitted = this directory (same names as files/directories, as entries)
   resolve(path: string): RepoPath; // a path relative to this directory → repo-relative (for Issue.file)
 }
 
@@ -380,9 +392,9 @@ export type VerifyResult = { readonly ignored: true } | { readonly ignored?: fal
 
 A directory that passes returns `{ issues: [] }` (`ignored` is optional, so `{ ignored: false, issues: [] }` means the same). Issues that are all warnings still pass: `check` fails only on `error`s left after the severity overrides (§9).
 
-`DirectoryInput` is a **scoped view of the same `RepoFiles`** (same cache, same read tracking), plus the directory's own eager listing. Its paths resolve **relative to this directory**: `'README.md'`, child paths (`'__tests__/a.test.ts'`) and parent paths (`'../index.ts'`) are all allowed. As with `RepoFiles`, the only boundary is the repo root: a path resolving outside it is rejected. Restricting `..` would protect nothing (`ctx.repo.files` reaches the whole repo anyway), and parent-looking rules exist (e.g. nested units, D36). Reads through either object are tracked, so `dev` invalidates a directory's result when any file it read changes.
+`DirectoryInput` is a **scoped view of the same `RepoFiles`** (same cache, same read tracking), plus the directory's own eager listing. Its paths resolve **relative to this directory**: `'README.md'`, child paths (`'__tests__/a.test.ts'`) and parent paths (`'../index.ts'`) are all allowed. As with `RepoFiles`, the only boundary is the repo root, lexically: a path normalising outside it is rejected (symlinks are followed). Restricting `..` would protect nothing (`ctx.repo.files` reaches the whole repo anyway), and parent-looking rules exist (e.g. nested units, D36). Reads through either object are tracked, so `dev` invalidates a directory's result when any file it read changes.
 
-The repo root (`'.'`) is verified too. An ignored directory still shows in the report tree (greyed out, "ignored by module"), since the requirement asks for the full non-ignored structure. Only the scan removes a directory from the tree entirely: `.gitignore` (incl. nested files and `.git/info/exclude`), the always-ignored `.git`, `node_modules` and output directory (C4), directories outside the config `include` patterns (D101), config `exclude` patterns, directories holding tsshowcase's output marker file, and skipped packages (D69).
+The repo root (`'.'`) is verified too when it is in `scope`. A directory the module ignores still shows in the report tree (greyed out, "ignored by module"), since the requirement asks for the full non-ignored structure. Only the scan removes a directory from the tree entirely (C4): `.gitignore` and `.tsshowcaseignore` files at or below the root (D103, D109; not above it, not `.git/info/exclude`), config `ignore` patterns (overriding them, `!` included, under git's parent rule, D107), the always-ignored `.git` and `node_modules`, an explicit output directory and directories holding tsshowcase's output marker file, skipped packages (D69), and directories outside `scope` (D101, D107).
 
 **A throwing `verify`** doesn't abort `check`: the CLI turns it into a synthetic `module/error` issue (severity `error`, the message names the module) on that directory, continues with the others, and `check` exits non-zero.
 
@@ -762,14 +774,14 @@ export interface TsshowcaseConfig {
   themes?: string | readonly string[]; // references, optionally '#name' (§7); default ['default-light', 'default-dark']
   defaultTheme?: string; // a theme name
   outDir?: string; // build output, relative to the config file; default './showcase'; the positional `build [outDir]` (relative to the cwd) wins (D93)
-  include?: readonly string[]; // D101: paths and glob patterns relative to the repo root; the definitive boundary of check and build; default ['.'] (root config only)
-  exclude?: readonly string[]; // gitignore-style patterns, on top of .gitignore (e.g. 'fixtures/'); carve out parts of the included folders
+  scope?: readonly string[]; // D101, D107 (was `include`): where to look, paths and globs relative to the repo root; the directories checked and showcased; never un-ignores; default ['.'] (root config only)
+  ignore?: readonly string[]; // D103, D107 (was `exclude`): gitignore syntax incl. `!`, relative to the root (e.g. '/fixtures/'); overrides .gitignore/.tsshowcaseignore on the same path
   rules?: { [ruleId: string]: Severity | 'off' };
   testRunners?: readonly string[]; // extra auto-detection candidates (D42)
   check?: boolean; // false = --no-check (D76): build doesn't fail on check errors
   tests?: boolean; // false = --no-tests
   failOnTestFailure?: boolean; // D8 strict mode
-  vcs?: { host?: VcsInfo['host']; webUrl?: string; defaultBranch?: string; fileUrlTemplate?: string }; // D24 overrides
+  vcs?: { webUrl?: string; directory?: string; host?: VcsInfo['host']; fileUrlTemplate?: string }; // D24, D110: override package.json#repository; no git
 }
 
 /** A workspace package's own tsshowcase.config.* (Q3): only package-scoped keys; repo-wide keys there are an error. */

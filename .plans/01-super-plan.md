@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -27,6 +27,14 @@
   - C8: a preliminary React showcase file format (D96). C10: finalises it; theme-owned breakpoints (D97); React resolved per showcased package (refines D91).
   - L1–L3 recorded as known open issues (AGENTS §4); the rest as open points per chunk. The cut-line review stays after all plans (D98); C10 stays one chunk (D99); shell-mode showcases get no scheme selector (D100; C2 rule 7, C3 §1); `include` folders and the marker-file skip (D101; C2 §5.5, §10, C4, C6); `BuildContext.themes` carries only name, label and scheme (D102, C2 §5.8).
 
+- **R5 (C4 planning, D103–D110, reviews `04a-c4-plan-review.md`):**
+  - **What exists (D103, D109):** hard ignores, then config `ignore` (renamed from `exclude`), then `.gitignore` and the `.tsshowcaseignore` alias, at or below the root only; git's parent rule for every source; no `.git/info/exclude`; no git calls.
+  - **Renames (D107):** `include` → `scope` (where to look, never un-ignores), `exclude` → `ignore`; scanner inputs `{ scope, ignore, skippedPackages, outDir }`.
+  - **Access (D108):** `RepoFiles`/`DirectoryInput` treat ignored paths as nonexistent unless `{ ignored: true }`; `.git`/`node_modules` never reachable (C2 amendment B4).
+  - **C8 → C9 (D106):** units (and `analyze` issues) outside `scope` are dropped by the CLI, not the module.
+  - **VCS (D110):** from `package.json#repository` and config `vcs.*` only, links always use `HEAD`; no git (revises D24, D105).
+  - **New private package `-test` (D104)** for test helpers (C1 amendment A3).
+
 ## Packages (D14, D15, D26, D27, D43)
 
 | Package                                  | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -38,6 +46,7 @@
 | `@ofzza/tsshowcase-testrunner-vitest`    | Prepackaged Vitest test runner (D3), with run and watch modes. Built-in name: `vitest`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `@ofzza/tsshowcase-base-vite`            | Reusable Vite pipeline helper (D43). Not a loadable module. Handles: data embedding as a virtual module, a framework-agnostic runtime API for theme stylesheets (adopted into a given shadow root, fonts stylesheet in the document, dev updates) and theme state (D89), `base: './'`, in-memory build output (returned as files for the CLI to write, D64), dev server, HMR and the live update channel. Modules call it with their framework plugins and app entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `@ofzza/tsshowcase-base-react`           | Shared React base (D20, D26, D48). Layout-agnostic and **not itself a loadable module**. Two halves:<br>• **check/init (Node, no bundler):** static entry analysis, base rules and the `headless` preset, scaffold templates;<br>• **build/dev:** a **React wrapper around `-base-vite`** (plugin-react, React deduped from the showcased repo, tsconfig paths) plus the runtime building blocks (data and live-channel access, the shadow-root shell host, slotted showcases with per-showcase scheme selectors, README HTML renderer, test-results view, theme switcher, hash router with in-shadow heading scroll; D89).<br>Exposes a **base module class** with analyze / verify / scaffold / runTests / build / dev already implemented. Layout modules extend it and supply only their app entry and layout. Depends on `-base-vite`. |
+| `@ofzza/tsshowcase-test`                 | **Private, never published** (D104): test helpers for this repo's own tests (`copyFixture()`, `fixturePath()`); a devDependency only; skips itself from the dogfood check (`skip: true`). Added by C4 (C1 amendment A3). |
 | `@ofzza/tsshowcase-module-react-default` | The v1 rendering module (D22). Built-in name: `react-default`. Contains **layout only**: app shell, navigation tree (repo → packages → units), route scheme, and the home/package/unit pages composed from the base building blocks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## Chunks
@@ -48,7 +57,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** an empty but fully wired workspace.
 - **Requirements:**
-  - npm workspaces with the package skeletons listed above (except `-lint`, added by C3, D88).
+  - npm workspaces with the package skeletons listed above (except `-lint`, added by C3, D88, and the private `-test`, added by C4, D104).
   - TS (ESM, Node `>=22.12`, D17/D49), build via `tsc` project references.
   - Prettier (160), ESLint, Vitest workspace config, `npm run ci` aggregate script.
   - A `fixtures/` directory convention. Fixtures are **isolated from the workspace**: excluded from `workspaces`, from root lint/test/type-check, and from dependency hoisting (each fixture has its own install where it needs `react`/`vitest`). Otherwise "resolve React from the showcased repo" can't be tested.
@@ -63,7 +72,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Goal:** the complete, documented v1 contracts.
 - **Requirements:**
   - **Input data model:**
-    - repo info (root, VCS host, branch);
+    - repo info (root, VCS host; links use `HEAD`, D110);
     - packages[] (D16, D19), each with: package info (sourced from package.json in v1, but source-agnostic so other repo types can come later), licence (D12), README raw and HTML (D23), unit hierarchy;
     - how the repo root README/licence relate to package READMEs/licences, including the single-package collapse (no duplicated README on home and package page);
     - per unit (a directory exporting 1+ symbols; nesting allowed, D36, so a unit can be both a page and a parent of sub-units): kind, exported symbols, README raw/HTML, tests (hierarchy plus outcomes), a possibly empty list of showcase entries (D37, D61);
@@ -119,19 +128,16 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 ### C4 — Repository scanning (CLI core)
 
 - **Goal:** turn a repo on disk into the repo / package / directory layer of the C2 input model. Units come from the module's `analyze` (C8), tests from the runner (C7), and HTML from C5.
-- **Requirements:**
-  - `.gitignore`-aware recursive walk:
-    - nested `.gitignore` files and `.git/info/exclude`;
-    - always ignored: `.git`, `node_modules`, an explicitly configured output directory, and any directory holding tsshowcase's output marker file (D101);
-    - **`include` (D101):** paths and glob patterns (default the whole repo), the definitive boundary of check and build; everything outside them is ignored, and `.gitignore` and `exclude` still apply inside them. Repo metadata (manifests, READMEs, licences, workspace and config files) is read wherever it lives. `include` is the definitive boundary: units outside it are neither checked nor showcased, without an issue;
-    - defined behaviour for non-git directories.
-  - Lazy file content accessors.
+- **Requirements** (details: the approved C4 plan):
+  - **What exists (D103, D109):** hard ignores (`.git`, `node_modules`, an explicitly configured output directory, any directory holding tsshowcase's output marker file, skipped packages); then config `ignore` patterns (gitignore syntax incl. `!`, overriding ignore files on the same path); then `.gitignore` files and their `.tsshowcaseignore` alias at or below the root only, with git's semantics (no `.git/info/exclude`, no global excludes, tracking state irrelevant, no git calls). Git's parent rule holds for every source. Behaviour is the same for non-git directories.
+  - **`scope` (D101, D107):** paths and glob patterns (default the whole repo) saying where to look: the directories checked and showcased. It never un-ignores. Repo metadata is read wherever it lives. Units and `analyze` issues outside it are dropped by the CLI (D106, C9).
+  - Lazy file content accessors; `read`/`exists`/`list` treat ignored paths as nonexistent unless `{ ignored: true }` (D108).
   - Workspace detection (npm, yarn and pnpm workspaces); single package = one package (D16). **A separate function** that C6 calls first, to find per-package config files (K9).
-  - **The scanner takes its exclusions as inputs:** `{ include, exclude, skippedPackages, outDir }`, resolved by C6 from the config (K9).
+  - **The scanner takes its exclusions as inputs:** `{ scope, ignore, skippedPackages, outDir }`, resolved by C6 from the config (K9, D107).
   - Read tracking for `RepoFiles` / `DirectoryInput` (D40), so `dev` can invalidate (K10).
   - package.json info, licence detection (D12), root and package READMEs.
-  - Git info: remote → host, default branch (D24), with a deterministic fallback for shallow clones, detached HEAD and a missing `origin/HEAD`.
-  - Fixtures: a single-package repo, a workspace repo, and broken variants.
+  - **VCS info (D24, D110):** from the root `package.json#repository`, overridden by config `vcs.*` and flags; links always use `HEAD`; no git.
+  - Fixtures: a single-package repo, workspace repos, and broken variants; the `copyFixture()` helper in the private `-test` package (D104).
 - **Depends on:** C2.
 
 ### C5 — Markdown pipeline (CLI core)
@@ -165,6 +171,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Config file discovery (`tsshowcase.config.ts|js|json`), validated against that schema, merged with CLI flags (D6).
   - Per-package config files in workspace packages (D59): discovery (using C4's workspace detection), the restricted package schema, and merging over the root config; each package's merged `moduleOptions` validated against the module's `optionsSchema` and handed over as `PackageInput.options` (D69).
   - Validation of module options.
+  - **Scan and VCS keys:** `scope` and `ignore` (D107) with repeatable `--scope` / `--ignore` flags, `vcs.webUrl` / `vcs.directory` / `vcs.host` / `vcs.fileUrlTemplate` with `--vcs-*` flags (D110); resolved into C4's scanner inputs.
 - **Depends on:** C2, C4 (workspace detection and scanner inputs, K9).
 
 ### C7 — Vitest test runner (`-testrunner-vitest`)
@@ -187,7 +194,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - package.json `exports`/`main`/`types` → entry → follows `export *` and named re-exports → source directories;
     - maps built entries (`dist/…`) back to source (e.g. the `source` export condition, tsconfig `rootDir`/`outDir`, or a config override), since `dist` may not exist;
     - uses the showcased repo's own TypeScript if it has one;
-    - exports whose source lies outside their own package (npm dependencies, sibling workspace packages) are external re-exports, never units; units outside `include` are dropped (D101);
+    - exports whose source lies outside their own package (npm dependencies, sibling workspace packages) are external re-exports, never units (units outside `scope` are dropped by the CLI, not the module: D106);
     - classifies exports by kind (component / hook / function / class / constant / type), as needed by the D37 showcase rules.
   - **Base rules (D21):**
     - every exported unit has its own directory;
@@ -207,7 +214,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 - **Requirements:**
   - CLI framework, global flags (`--module`, `--theme`, `--config`, `--cwd`).
   - **`check`:**
-    - tree report of every non-ignored directory, with per-directory issues (human-readable, coloured);
+    - tree report of every scanned directory (in `scope`, not ignored), with per-directory issues (human-readable, coloured);
     - `--format json`;
     - non-zero exit code on errors (D16).
   - **`init <dir>`** calls the module's `scaffold` (and reports clearly when a module lacks it, per D13 feature detection).
@@ -311,6 +318,7 @@ The C2 contract implies CLI-side behaviour beyond scanning and loading. Owners:
 | ---- | ----- |
 | Read tracking for `RepoFiles` / `DirectoryInput` (D40) | C4 |
 | Validating the analysis (unit dirs exist, inside their package and `unitRoot`, unique, known packages) and throwing a module error (D70) | C9 (shared helper, reused by C11) |
+| Dropping units and `analyze` issues outside `scope` (D106; order: existence check → drop → remaining D70 checks) | C9 (shared helper, reused by C11) |
 | Severity overrides with per-package `rules`, deriving `Issue.package` (D70) | C9 (shared helper, reused by C11) |
 | Synthetic `module/error` issue when `verify` throws | C9 |
 | Building the hierarchy from flat units + `unitRoot` (groups, nesting, group READMEs) | C11 |

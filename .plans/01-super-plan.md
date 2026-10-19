@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -38,6 +38,11 @@
 - **R6 (C6 planning, D111–D117, review `06a-c6-plan-review.md`):**
   - C6: plugin paths only as `file:` (D114); config files `.ts|.mts|.js|.mjs|.json|.jsonc`, JSON with comments (D115); C6 parses every option flag and positional, C9 owns the commands and `--help` (D111); flags vs config arrays (D112); `dev.host`/`dev.port` (D113); path-marked module options (D116, C2 amendment B5); path-loaded plugins get the CLI's tsshowcase packages (D117); `outDir` resolved by C6.
   - C9: "CLI framework, global flags" → the command framework and `--help` (D111). C11: `--out` → `build [outDir]` (D93, stale since R3).
+
+- **R7 (C5 planning, D118–D131, review `05a-c5-plan-review.md`):**
+  - C5: starry-night (D118); sanitised raw HTML (D119); local README media copied into the site as doc assets by the CLI, served from a CLI-maintained directory in `dev` (L1, D120, D125, D129); broken README links and anchors as `check` warnings `docs/broken-link`, `docs/broken-anchor`, decided without routes (D123, D124); alerts (D122); exact case (D130). C5 now depends on C4 (the file layer).
+  - The hierarchy helper (groups, nesting, group READMEs) moves from C11 to C9 (shared, reused by C11); C9 reserves a docs step in `check`, wired by C5's implementation; C9 depends on C5. Implementation order unchanged.
+  - C11 writes doc assets and maintains the `dev` doc-assets directory; C15 serves it; C12 gains README image, anchor and alert checks. C2 amendment B6, C3 amendment C3-A1, a C6 amendment (`docs/*` rule ids) and a C4 note.
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -158,8 +163,11 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Collects each document's headings (depth, text, id) for `Doc.headings` (C2).
   - Plain-text docs (`LICENSE`, `.txt`; `Doc.format: 'text'`, D71) render as escaped `<pre>` with a catalogue class.
   - Link-to-target mapping per D73 (a unit's README or directory → the unit, …, anything else → the VCS host).
-  - Syntax highlighting for code blocks (D39), emitting only themable token classes, with no inline colours.
-- **Depends on:** C2, C3 (class names).
+  - Syntax highlighting for code blocks (D39), emitting only themable token classes, with no inline colours: starry-night (D118).
+  - Raw HTML passed through, sanitised with GitHub's rules, author classes stripped (D119, D126); GitHub alerts (D122); GitHub-compatible heading and footnote ids, author anchors (D127, D128).
+  - **Doc assets (L1, D120, D125, D129):** local README media copied into the site under `tss-assets/<hash>/<name>` (`Doc.assets`), from the local state, only files whose real path lies inside the repo and isn't ignored; the CLI writes them in `build` (C11) and keeps a `dev` directory the module serves (C15).
+  - **`check` issues (D123, D124):** `docs/broken-link`, `docs/broken-anchor` (warnings) from `checkDocs`, which shares the classifier with rendering and never needs routes; exact case on every filesystem (D130).
+- **Depends on:** C2, C3 (class names), C4 (the file layer).
 
 ### C6 — Plugin loading + configuration (CLI core)
 
@@ -222,9 +230,11 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - tree report of every scanned directory (in `scope`, not ignored), with per-directory issues (human-readable, coloured);
     - `--format json`;
     - non-zero exit code on errors (D16).
+  - **The shared hierarchy helper (R7):** flat units + `unitRoot` → groups, nesting, group READMEs (D78); reused by C11, which adds routes.
+  - **A docs step in `check` (R7, D123):** reserved here, wired to C5's `checkDocs` by C5's implementation.
   - **`init <dir>`** calls the module's `scaffold` (and reports clearly when a module lacks it, per D13 feature detection).
   - **Self-check (D41):** `tsshowcase check` runs on this repo in CI.
-- **Depends on:** C4, C6, C8.
+- **Depends on:** C4, C5, C6, C8.
 
 ### C10 — React runtime building blocks + default module (`-base-react` runtime, `-module-react-default`)
 
@@ -260,7 +270,8 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `--fail-on-test-failure` (D8); `--no-tests` (optional). The chunk plan decides whether "tests unavailable" (D42) also fails in strict mode, and whether test results are cached.
   - **Writing the output (D64):** the module returns the site as files; the CLI validates the paths, checks the checkable inclusion rules, and writes the output directory (`build [outDir]`, D93) with the output guard, an atomic swap and a marker file (details: C2 plan, "Recorded for later chunks").
   - **`check` first (D76):** `build` and `dev` run the full `check` and print the report; errors fail `build` unless `--no-check` (config `check: false`); `dev` never fails on them.
-  - **Group READMEs (D78):** a `README.md` in a group directory becomes `GroupNode.readme`.
+  - **Group READMEs (D78):** found by C9's hierarchy helper (R7); C11 renders them into `GroupNode.readme`.
+  - **Doc assets (D120, D125):** writes every `Doc.assets` file next to the module's files in `build` (rejecting module files under `tss-assets/`; the no-absolute-paths check skips them); in `dev`, keeps the doc-assets directory in the CLI cache, rebuilt per data update, passed as `DevContext.docAssetsDir`.
   - **`dev`:** the CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).
 - **Depends on:** C3, C5, C6, C7, C9, C10.
 
@@ -275,6 +286,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **Runtime API (D89, H28):** framework-agnostic helpers that C10 (and other frameworks' modules) call: adopt the theme shell stylesheet plus module sheets into a given shadow root in order (with a `<style>` fallback), add the fonts stylesheet to the document, apply dev stylesheet updates (`replaceSync()` from `DevContext.onThemeStylesheetsUpdate`, forwarded over the live channel), theme state (`getInitialTheme()`, `setTheme()`, `subscribe()`), and the document-level `color-scheme`/canvas background plus the `index.html` meta and inline selection script.
   - Theme stylesheets are processed as toolchain inputs (`?inline`-style, emitting their assets; never `?raw`).
   - Builds set `mode`/`NODE_ENV=production` explicitly (a test run may leave `NODE_ENV=development` behind; D94).
+  - Serves `DevContext.docAssetsDir` statically at `tss-assets/` in `dev` (D125).
   - Framework-agnostic: no React knowledge.
 - **Depends on:** C2, C3.
 
@@ -286,6 +298,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - Built output opened in headless Chrome: navigation, showcase rendering, test results, theme switching.
   - **D89 acceptance:** a fixture whose showcase imports a global reset (incl. `html`/`body` rules) and a portal component: the shell is unaffected, the showcase is styled by the user's CSS, the portal is not clipped and paints above the shell; per-showcase scheme switching (`colorScheme` prop, `data-scheme` backdrop); README heading links scroll to the heading; theme fonts load; a dark theme gives dark scrollbars and canvas.
   - **Contrast smoke test (D85):** computed WCAG AA contrast for the default themes' semantic pairs in the built output.
+  - **README content (R7):** a README image in `build` and in `dev` (updated when the image changes), footnote, cross-doc and author-anchor scrolling, themed alerts.
 - **Depends on:** C11.
 
 ### C13 — Documentation
@@ -326,7 +339,8 @@ The C2 contract implies CLI-side behaviour beyond scanning and loading. Owners:
 | Dropping units and `analyze` issues outside `scope` (D106; order: existence check → drop → remaining D70 checks) | C9 (shared helper, reused by C11) |
 | Severity overrides with per-package `rules`, deriving `Issue.package` (D70) | C9 (shared helper, reused by C11) |
 | Synthetic `module/error` issue when `verify` throws | C9 |
-| Building the hierarchy from flat units + `unitRoot` (groups, nesting, group READMEs) | C11 |
+| Building the hierarchy from flat units + `unitRoot` (groups, nesting, group READMEs) | C9 (shared helper, reused by C11; moved by R7) |
+| Writing doc assets into the output; the `dev` doc-assets directory (D120, D125) | C11 |
 | Defaulting units absent from `TestResults` | C11 |
 | `SOURCE_DATE_EPOCH` for `generatedAt` | C11 |
 | `revision` numbering and dropping out-of-order updates | C11 |
@@ -342,11 +356,11 @@ The C2 contract implies CLI-side behaviour beyond scanning and loading. Owners:
 | C2    | C1 (placement only)                                  |
 | C3    | C2 (theme manifest; fills the `-api` catalogue, D28) |
 | C4    | C2                                                   |
-| C5    | C2, C3                                               |
+| C5    | C2, C3, C4                                           |
 | C6    | C2, C4 (workspace detection, scanner inputs; K9)    |
 | C7    | C2                                                   |
 | C8    | C2, C4 (fixtures)                                    |
-| C9    | C4, C6, C8                                           |
+| C9    | C4, C5, C6, C8                                       |
 | C10   | C2, C3, C5, C7, C8, C15                              |
 | C11   | C3, C5, C6, C7, C9, C10                              |
 | C12   | C11                                                  |
@@ -364,7 +378,7 @@ Plans are approved one at a time. "Parallel" means a group's members only depend
 | P2   | **C2**, then **C3**                             | C2 is the critical, collaborative contract. C3 fills C2's catalogue, so the C2 plan stays open until C3 is approved.                          |
 | P3   | **C4, C5, C6, C7, C15** (approved one at a time, in any order, except **C4 before C6**) | Each depends only on C2/C3 (C6 also on C4's seam, K9). Planning C7 early also explores the Vitest Node API, the least-known piece; since C2 is approved, a finding there means backtracking to C2. |
 | P4   | **C8**                                          | Needs C4's fixtures.                                                                                                                          |
-| P5   | **C9** and **C10** (parallel)                   | C9 needs C4, C6 and C8; C10 needs C3, C5, C7, C8 and C15. The loadable module class lives in C8, so they don't depend on each other.          |
+| P5   | **C9** and **C10** (parallel)                   | C9 needs C4, C5, C6 and C8; C10 needs C3, C5, C7, C8 and C15. The loadable module class lives in C8, so they don't depend on each other.          |
 | P6   | **C11**                                         | Integrates C9 and C10.                                                                                                                        |
 | P7   | **C12** and **C13** (parallel)                  | Both depend only on C11.                                                                                                                      |
 | P8   | **C14**                                         | Final.                                                                                                                                        |

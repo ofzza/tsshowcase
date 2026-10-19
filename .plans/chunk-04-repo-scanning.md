@@ -1,6 +1,6 @@
 # Chunk plan C4: Repository scanning (CLI core)
 
-> Status: **APPROVED** (round 8, 2026-10-18; reviews in `04a-c4-plan-review.md`, two rounds, fully resolved). Approved together with C2 amendment B4, C1 amendment A3 and super-plan R5, all applied. Decisions D103–D110 are in AGENTS.md §3.
+> Status: **APPROVED** (round 8, 2026-10-18; reviews in `04a-c4-plan-review.md`, two rounds, fully resolved). Approved together with C2 amendment B4, C1 amendment A3 and super-plan R5, all applied. Decisions D103–D110 are in AGENTS.md §3. **C4 note (C5 planning) approved 2026-10-19 with the C5 plan:** §7 binary reads, real-path resolution and a case-exact existence check for C5 (D129, D130).
 
 ## Goal
 
@@ -216,6 +216,8 @@ export interface FileAccess {
 ```
 
 C4 provides the mechanism; matching watcher events to recorded accesses and re-running `verify` is C11's (K10). **`readJson`:** not added (C2 §5.3).
+
+**C4 note (C5 planning, D129, D130):** the file layer also offers (internal to the CLI) binary reads next to `read`, real-path resolution (every symlink in the path resolved) and a case-exact existence check (each segment confirmed by a `list` of its parent on case-insensitive filesystems). All three are tracked as reads like `read`/`exists`/`list` and covered by C4's tests. C5 uses them for doc assets and README links.
 
 ## 8. Manifests, READMEs and licences
 

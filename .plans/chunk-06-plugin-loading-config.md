@@ -1,6 +1,6 @@
 # Chunk plan C6: Plugin loading + configuration (CLI core)
 
-> Status: **APPROVED** (round 4, 2026-10-19). Open questions Q1–Q5 resolved (D111–D115); the fresh-eyes review `06a-c6-plan-review.md` (P1–P14) applied (D116, D117). Approved together with C2 amendment B5 and super-plan R6, both applied. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 4, 2026-10-19). Open questions Q1–Q5 resolved (D111–D115); the fresh-eyes review `06a-c6-plan-review.md` (P1–P14) applied (D116, D117). Approved together with C2 amendment B5 and super-plan R6, both applied. **C6 amendment (C5 planning) approved 2026-10-19 with the C5 plan:** `docs/*` rule ids (§12). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -53,7 +53,7 @@ Order inside `resolveConfig`:
 7. **Phase-2 argv parse** with the module's `optionFlags` added (§3, §9.2); any unknown flag or extra positional is now an error.
 8. **Options:** path-marked values in each source made absolute against that source's base (§9.4, D116); then root `moduleOptions` + flags → validate → `ModuleInit.options`; per package: root `moduleOptions` shallow-merged with the package's own + flags → validate → `PackageInput.options` (D69).
 9. **Scan inputs:** `scope` (validated with C4's `validateScope()`), `ignore`, `skippedPackages`, `outDir` (positional > config > default, D93; only an explicit one goes to the scanner, validated early, M13, P2), `vcs` overrides (§12).
-10. **Rule ids:** `rules` keys checked against the module's `rules`, plus the CLI-known `scan/*` and `module/error` (M15).
+10. **Rule ids:** `rules` keys checked against the module's `rules`, plus the CLI-known `scan/*`, `docs/*` and `module/error` (M15).
 11. **Instantiate the module** with `ModuleInit` (§9.3).
 
 Themes are loaded on demand (`resolved.loadThemes()`, §10): only `build` and `dev` need them, and a broken theme reference must not fail `check`. Test runners are loaded on demand by the module (§11).
@@ -241,7 +241,7 @@ Module options may hold paths (`showcaseStylesheets`, `showcaseSetup`, C3 §1) a
 - **`skippedPackages`:** from package configs (§7).
 - **`outDir` (M13, P2):** resolved here: the `build` positional, else config `outDir`, else `./showcase` relative to the cwd (D93). Only an **explicit** value (positional, config) is passed to the scanner (D101). It is validated early with the same check `scanRepo` uses (C4 §10: not the root, not an ancestor of it, not containing a package), shared as one helper exported internally from `scan/`.
 - **`vcs`:** the four keys and flags merged (flag → config) into C4's `VcsOverrides`; `vcs.host` must be one of the three hosts; `fileUrlTemplate` must contain `{path}`.
-- **Rule ids (M15):** root and package `rules` keys are checked against the module's `rules` plus the CLI-known ids (`scan/no-manifest`, `scan/invalid-manifest`, `scan/scope-unmatched`, `scan/unreadable`, `module/error`). An unknown id in the CLI's own namespaces (`scan/`, `module/`) always gives a warning naming the file; an unknown id in any other namespace warns only when the module declares `rules` (C2 §9), since without them the CLI can't know the module's ids (P14).
+- **Rule ids (M15):** root and package `rules` keys are checked against the module's `rules` plus the CLI-known ids (`scan/no-manifest`, `scan/invalid-manifest`, `scan/scope-unmatched`, `scan/unreadable`, `docs/broken-link`, `docs/broken-anchor`, `module/error`; the `docs/*` ids from C5, D123). An unknown id in the CLI's own namespaces (`scan/`, `docs/`, `module/`) always gives a warning naming the file; an unknown id in any other namespace warns only when the module declares `rules` (C2 §9), since without them the CLI can't know the module's ids (P14).
 
 ## 13. Errors
 
@@ -274,7 +274,7 @@ Tests, per directory of §1:
 - module options: defaults applied, validation errors, no schema, `optionFlags` for every supported type, unsupported targets, flags on root and package options;
 - themes: parsing, `#name` selection and its error, shared instances, definition validation, version checks;
 - `loadTestRunner`: explicit ref, one / several / no match, `candidates` intersection by identity, a built-in runner also installed in the repo counted once, a throwing `detect`, caching;
-- rule ids: module ids, CLI-known ids, unknown ids in `scan/`/`module/` always warned, others only with module `rules`;
+- rule ids: module ids, CLI-known ids, unknown ids in `scan/`/`docs/`/`module/` always warned, others only with module `rules`;
 - the exported units: `defineConfig` and `definePackageConfig` (type tests: a config object type-checks, a wrong key fails, `skip` only in a package config), `configSchema` validates a sample config and rejects an invalid one (C2 acceptance), a consumer-style type test over `dist` infers `TsshowcaseConfig` as an object type, not `never` (C2 acceptance, D62), the package-root schema copies match the sources, the `source` export condition resolves the schemas without a build.
 
 ## 15. Documentation

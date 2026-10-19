@@ -1,6 +1,6 @@
 # Chunk plan C3: Theme system + default themes
 
-> Status: **APPROVED** (round 6, 2026-10-18). Post-approval, with the user's approval (checkpoint review `01b-checkpoint-review.md`): D92 (bare-element theme selectors only inside `.tss-content`) and the theme rules renumbered 1–4. **Re-approved 2026-10-18 (prototype spikes, `01c-spike-results.md`):** `isolation: isolate !important` and the `!important` rule for `:host`/`slot`, the showcase setup option, stacking and synthetic-event notes, `@font-face` wording. Reworked after two fresh-eyes reviews (`03a-c3-plan-review.md`, `03b-c3-plan-review.md`) and the isolation redesign (D89: Shadow-DOM shell, light-DOM showcases). Decisions referenced as `D<n>` are in AGENTS.md §3. Approving this plan also closes the C2 plan (C3 fills its catalogue slot, D28). **Re-approved 2026-10-18 with super-plan R4:** §1, shell-mode showcases get no scheme selector (D100).
+> Status: **APPROVED** (round 6, 2026-10-18). Post-approval, with the user's approval (checkpoint review `01b-checkpoint-review.md`): D92 (bare-element theme selectors only inside `.tss-content`) and the theme rules renumbered 1–4. **Re-approved 2026-10-18 (prototype spikes, `01c-spike-results.md`):** `isolation: isolate !important` and the `!important` rule for `:host`/`slot`, the showcase setup option, stacking and synthetic-event notes, `@font-face` wording. Reworked after two fresh-eyes reviews (`03a-c3-plan-review.md`, `03b-c3-plan-review.md`) and the isolation redesign (D89: Shadow-DOM shell, light-DOM showcases). Decisions referenced as `D<n>` are in AGENTS.md §3. Approving this plan also closes the C2 plan (C3 fills its catalogue slot, D28). **Re-approved 2026-10-18 with super-plan R4:** §1, shell-mode showcases get no scheme selector (D100). **Amendment C3-A1 (C5 planning) approved 2026-10-19 with the C5 plan:** alert classes, `tssData.alert` and alert tokens (D122); `tssData.language`; default styles for README elements; own classes no longer reach README raw HTML (D126); syntax-token coverage note (D131).
 
 ## Goal
 
@@ -87,7 +87,7 @@ Ideally the catalogue is enough for any theme; extending it is allowed, not expe
 
 1. **No self-scoping, no document selectors and nothing that reaches showcases:** no `[data-theme]`, `:host`, `:host()`, `:host-context()`, `html`, `body`, `slot`, `::slotted()` or `::part()` selectors, no compound `:root`, and no `color-scheme` declarations (they come from `ThemeDefinition.scheme`, H22). The CLI scopes (§5); the theme only ever applies inside the shell and never to showcase content (H4).
 2. **Own names use their own prefix,** never `tss-` / `--tss-`, which are reserved for the catalogue, so a future catalogue addition never collides with a theme's invention (e.g. `--ocean-wave-height`, `.ocean-ribbon`, `@keyframes ocean-pulse`, `font-family: 'Ocean Sans'`). Keyframe names always use the theme's own prefix (the catalogue defines none, H26).
-3. **Modules only use catalogue names in their markup,** plus their own prefixed classes for arrangement only, which themes never style (G25). A theme's own classes are therefore useful in two places only: showcases rendered inside the shell, and raw HTML in READMEs (whether C5 passes raw HTML through, sanitised, is a C5 decision, H23).
+3. **Modules only use catalogue names in their markup,** plus their own prefixed classes for arrangement only, which themes never style (G25). A theme's own classes are therefore useful in one place only: showcases rendered inside the shell. C5 strips author classes from README raw HTML (D119, D126).
 4. **Respect the layout rules of §1** (no clipping or containing-block properties on stage ancestors).
 
 These are contract rules for every theme (rules 1–4), documented each with its purpose in **"Building a theme that works with any module"** (§11). The `-lint` presets check them (§9); they're enforced on our own themes only (D46).
@@ -142,7 +142,8 @@ base tokens ──► derived scales ──► semantic tokens ──► compone
 - **Text:** `--tss-text`, `--tss-text-muted`, `--tss-text-subtle`, `--tss-text-inverse`, `--tss-text-on-accent`.
 - **Lines:** `--tss-border`, `--tss-border-strong`.
 - **Interaction:** `--tss-accent`, `--tss-accent-hover`, `--tss-link`, `--tss-link-hover`, `--tss-link-visited`, `--tss-focus-ring`, `--tss-selection`.
-- **Code:** `--tss-code-surface`, `--tss-code-text`, and syntax colours `--tss-syntax-<token>` for `comment`, `keyword`, `string`, `number`, `function`, `type`, `variable`, `constant`, `operator`, `punctuation`, `tag`, `attribute`, `property`, `regexp`, `inserted`, `deleted` (D39).
+- **Code:** `--tss-code-surface`, `--tss-code-text`, and syntax colours `--tss-syntax-<token>` for `comment`, `keyword`, `string`, `number`, `function`, `type`, `variable`, `constant`, `operator`, `punctuation`, `tag`, `attribute`, `property`, `regexp`, `inserted`, `deleted` (D39). The CLI's highlighter (starry-night, D118) rarely or never emits `number`, `type`, `operator`, `punctuation` and `property` distinctly; the catalogue docs say so (D131), and the tokens stay for other highlighters and modules.
+- **Alerts (C3-A1, D122):** `--tss-alert-<kind>` and `--tss-alert-<kind>-surface` for `note`, `tip`, `important`, `warning`, `caution`, defaulting to existing semantic tokens (note and important → accent, tip → `passed`, warning → a warning pick, caution → `failed`; final picks at implementation); contrast reviewed (D85).
 - **Test status:** `--tss-status-<s>` and `--tss-status-<s>-surface` for every `data-status` value: `passed`, `failed`, `skipped`, `todo`, `running`, `queued`, `unavailable`, `not-run` (G14).
 - **Showcase stage:** `--tss-stage-surface-light`, `--tss-stage-surface-dark` (the stage backdrop for each selected showcase scheme, §1).
 
@@ -187,6 +188,7 @@ All four layers are declared on the **theme scope element**, the shell root `.ts
 | Page             | `tss-page`, `tss-page-header`, `tss-title`, `tss-subtitle`, `tss-section`, `tss-section-title`                                                                                                                         |
 | README content   | `tss-content` (the container the module puts README HTML in; the theme styles the bare elements inside it as prose)                                                                                                    |
 | Content elements | `tss-h1` … `tss-h6`, `tss-paragraph`, `tss-link`, `tss-list`, `tss-list-item`, `tss-code`, `tss-code-block`, `tss-blockquote`, `tss-table`, `tss-rule`, `tss-heading-anchor`                                            |
+| Alerts (C3-A1)   | `tss-alert` (`data-alert`), `tss-alert-title` (GitHub alerts in READMEs, D122)                                                                                                                                            |
 | Plain-text docs  | `tss-text-doc` (the escaped `<pre>` for `Doc.format: 'text'`, D71)                                                                                                                                                      |
 | Syntax tokens    | `tss-token-<token>` for the 16 tokens of §3.3 (C5 maps its highlighter's token types onto them, D39)                                                                                                                    |
 | Unit info        | `tss-badge` (`data-kind`), `tss-symbol-list`, `tss-symbol`                                                                                                                                                             |
@@ -307,6 +309,8 @@ export const catalogue = {
     pressed: { name: 'aria-pressed', values: ['true', 'false'], description: '…' },
     current: { name: 'aria-current', values: ['page', 'location'], description: 'page: the active nav link; location: the heading a route targets' },
     scheme: { name: 'data-scheme', values: ['light', 'dark'], description: 'The selected scheme of a showcase stage' },
+    alert: { name: 'data-alert', values: ['note', 'tip', 'important', 'warning', 'caution'], description: 'The kind of a README alert (C3-A1)' },
+    language: { name: 'data-language', values: [], open: true, description: 'The language of a highlighted code block (C3-A1)' },
   },
 } as const;
 ```
@@ -396,6 +400,14 @@ All Node-side (no browser tests, G10):
 - **Super-plan, revision R2 (revised, round 6 additions):** C15's runtime API and C10's duties (H28); C12's D89 acceptance and contrast smoke test (H33, H31); the `-base-vite`/`-base-react` rows (H30). Earlier: the `-lint` row and the updated `-theme-default` and CLI rows (G41); C3 owns the isolation model's specification, the scoping transform and the lint package; C10 implements the shadow-root shell, slotted showcases, scheme selectors and the shell opt-in; C11 owns the CLI cache, atomic writes and calls the transform (edge C11 → C3, G34); C15 adopts the shell stylesheet into the shadow root, adds the fonts stylesheet, allows the cache and asset directories, and hot-reloads adopted stylesheets; C5 uses `tssData`/token classes; C13 references `-lint`; C14 publishes `-lint` after `-api`; stale C2/C13 text fixed (G28); C1's package list excludes `-lint` (G30).
 - **AGENTS.md:** D89 reworded (no "exactly as in the user's app" overclaim, H41) and the §6 pitfalls (H42); D85 (C12 contrast smoke test); D7 wording (H44); D89 (isolation model); D44, D81, D86, D87, D85, D82, D88 revised accordingly; D35/D42 wording (G42); resume steps list the review files (G45).
 - **C1:** no change.
+
+## Amendment C3-A1 (C5 planning, approved 2026-10-19 with the C5 plan)
+
+- **Alerts (D122):** classes `tss-alert`, `tss-alert-title`; `tssData.alert`; alert tokens (§3.3); default theme styles.
+- **`tssData.language`** (`data-language`, open values) on code blocks (C5 §2.1).
+- **README elements in the default `catalogue.css`** (inside `.tss-content`): `img`, `video`, `picture` (`max-width: 100%`), `kbd`, `details`/`summary`, task-list checkboxes, footnote `sup` and `section`, using existing tokens.
+- **Text fix (D126):** §2.1 rule 3: own classes are useful in shell-mode showcases only.
+- **Coverage note (D131):** §3.3 and the catalogue docs name the syntax tokens the CLI's highlighter leaves unused.
 
 ## Out of scope
 

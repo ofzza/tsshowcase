@@ -1,6 +1,6 @@
 # Chunk plan C6: Plugin loading + configuration (CLI core)
 
-> Status: **APPROVED** (round 4, 2026-10-19). Open questions Q1–Q5 resolved (D111–D115); the fresh-eyes review `06a-c6-plan-review.md` (P1–P14) applied (D116, D117). Approved together with C2 amendment B5 and super-plan R6, both applied. **C6 amendment (C5 planning) approved 2026-10-19 with the C5 plan:** `docs/*` rule ids (§12). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 4, 2026-10-19). Open questions Q1–Q5 resolved (D111–D115); the fresh-eyes review `06a-c6-plan-review.md` (P1–P14) applied (D116, D117). Approved together with C2 amendment B5 and super-plan R6, both applied. **C6 amendment (C5 planning) approved 2026-10-19 with the C5 plan:** `docs/*` rule ids (§12). **C6 amendment (C7 planning) approved 2026-10-19 with the C7 plan:** §7 `testRunner` in package configs warned and dropped (D136); §11 runners receive `ctx.repo` (C2 B7). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -164,6 +164,7 @@ Rationale for the arrays (M12): `--ignore` appends because the common use is "th
 - **Discovery:** for `layout: 'workspace'`, the same six file names in each `WorkspaceInfo.packages` directory; several in one package is an error. Loaded like the root config (jiti, aliases), validated against the package schema. Config files are metadata: read whether or not the package is in `scope` or ignored (D101).
 - **`skip: true`** puts the package into `skippedPackages` (C4: a hard cut, nested packages included).
 - **Merging:** path-marked option values are first made absolute against each source's own base (§9.4, D116); then `rules` and `moduleOptions` are **shallow-merged** over the root values (C2 §10); module flags are then applied on top of every merged result, then each result is validated against `optionsSchema` (D69, D79). A validation error names the package config file it came from.
+- **`testRunner` is root-only (D136):** a `testRunner` key in a package config's `moduleOptions` is warned about ("`testRunner` is read from the root config only") and dropped before merging and validation. Option names are otherwise the module's business; the CLI only knows this conventional key (C2 §5.11).
 - **Single-package layout:** no package configs (the root config is the package's config).
 
 ## 8. Plugin references and loading (D9)
@@ -231,7 +232,7 @@ Module options may hold paths (`showcaseStylesheets`, `showcaseSetup`, C3 §1) a
 `resolved.loadTestRunner(repo)` returns the helper the CLI puts on `TestContext`:
 
 - **With `ref`:** resolve (§8, kind runner), version-check, construct; failure throws. `ref` need not be among the candidates.
-- **Without `ref`:** the candidate set is the built-ins (`vitest`) plus config `testRunners`, intersected with `options.candidates` when given. **Candidates are deduplicated by identity (P8):** built-in names are first mapped to their package (`vitest` → `@ofzza/tsshowcase-testrunner-vitest`), and npm references compare by package name plus export subpath, `file:` references by absolute path; so `'vitest'`, `'@ofzza/tsshowcase-testrunner-vitest'` and a copy of that package installed in the repo are one candidate (resolved as the built-in, from the CLI). Each candidate's `detect(runnerRepo)` runs (`RunnerRepoInput` from the `RepoInput`). Exactly one match → returned and logged; several → throws "several test runners detected (`vitest`, `file:./tools/jest-runner.ts`); set the module option `testRunner`"; none → `undefined`. A candidate that fails to load or whose `detect` throws is an error naming it (not silently skipped).
+- **Without `ref`:** the candidate set is the built-ins (`vitest`) plus config `testRunners`, intersected with `options.candidates` when given. **Candidates are deduplicated by identity (P8):** built-in names are first mapped to their package (`vitest` → `@ofzza/tsshowcase-testrunner-vitest`), and npm references compare by package name plus export subpath, `file:` references by absolute path; so `'vitest'`, `'@ofzza/tsshowcase-testrunner-vitest'` and a copy of that package installed in the repo are one candidate (resolved as the built-in, from the CLI). Each candidate's `detect(repo)` runs with the `RepoInput` itself (assignable to `RunnerRepoInput`, C2 B7). Exactly one match → returned and logged; several → throws "several test runners detected (`vitest`, `file:./tools/jest-runner.ts`); set the module option `testRunner`"; none → `undefined`. A candidate that fails to load or whose `detect` throws is an error naming it (not silently skipped).
 - Instances are cached per identity for the invocation.
 
 ## 12. Scanner inputs, VCS and rules

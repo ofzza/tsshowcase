@@ -1,6 +1,6 @@
 # Chunk plan C4: Repository scanning (CLI core)
 
-> Status: **APPROVED** (round 8, 2026-10-18; reviews in `04a-c4-plan-review.md`, two rounds, fully resolved). Approved together with C2 amendment B4, C1 amendment A3 and super-plan R5, all applied. Decisions D103–D110 are in AGENTS.md §3. **C4 note (C5 planning) approved 2026-10-19 with the C5 plan:** §7 binary reads, real-path resolution and a case-exact existence check for C5 (D129, D130).
+> Status: **APPROVED** (round 8, 2026-10-18; reviews in `04a-c4-plan-review.md`, two rounds, fully resolved). Approved together with C2 amendment B4, C1 amendment A3 and super-plan R5, all applied. Decisions D103–D110 are in AGENTS.md §3. **C4 note (C5 planning) approved 2026-10-19 with the C5 plan:** §7 binary reads, real-path resolution and a case-exact existence check for C5 (D129, D130). **C4 amendment (C7 planning) approved 2026-10-19 with the C7 plan:** §11.1 `linkNodeModules` links every `node_modules` (nested installs, `07a-c7-plan-review.md`).
 
 ## Goal
 
@@ -291,7 +291,7 @@ export function fixturePath(name: string): string; // fixtures/<name> in place, 
 export function copyFixture(name: string, options?: CopyFixtureOptions): Promise<FixtureCopy>;
 
 export interface CopyFixtureOptions {
-  readonly linkNodeModules?: boolean; // symlink the fixture's installed node_modules into the copy (default false)
+  readonly linkNodeModules?: boolean; // symlink every installed node_modules of the fixture not inside another node_modules (root and packages) to the same path in the copy (default false; C7 amendment)
   readonly files?: { readonly [path: string]: string }; // extra files written relative to the copy (content a fixture can't commit, e.g. under its own .gitignore); `../x` lands in the temporary parent directory, so a test can put a `.gitignore` above the scan root (N10)
 }
 
@@ -303,7 +303,8 @@ export interface FixtureCopy {
 
 - Finds `fixtures/` from its own location (`import.meta.url`), so it works from any package's tests.
 - Copies into `<tmp>/fixture/`, with `<tmp>` from `fs.mkdtemp(os.tmpdir()/tsshowcase-fixture-)`, skipping `node_modules`. No git setup: the product never uses git (D110); it can be added when a later chunk needs it.
-- Own tests: copying, `node_modules` skipped, `files` (including `../`), cleanup.
+- **`linkNodeModules` (C7 amendment):** links the root `node_modules` and each package's own one, so nested installs (`install-strategy=nested`, C7's `vitest-per-package`) resolve like the original. Caveats (documented): resolved paths are the original's real paths; the root `node_modules` workspace links are relative, so through the symlink they point at the original's packages; a test that edits package sources in the copy and imports them by package name needs a real root `node_modules` with fresh links (added when a test needs it).
+- Own tests: copying, `node_modules` skipped, `files` (including `../`), cleanup, a nested-install copy resolving like the original.
 - The N3 differential test calls `git check-ignore` (test tooling only) with every inherited `GIT_*` variable stripped and `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1` (N11), so the developer's git config can't leak in; it needs a `git` binary (CI has one).
 
 ### 11.2 Fixtures added by C4

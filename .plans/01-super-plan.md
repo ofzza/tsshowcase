@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19); R8 (C7 planning) **re-approved** together with the C7 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -43,6 +43,11 @@
   - C5: starry-night (D118); sanitised raw HTML (D119); local README media copied into the site as doc assets by the CLI, served from a CLI-maintained directory in `dev` (L1, D120, D125, D129); broken README links and anchors as `check` warnings `docs/broken-link`, `docs/broken-anchor`, decided without routes (D123, D124); alerts (D122); exact case (D130). C5 now depends on C4 (the file layer).
   - The hierarchy helper (groups, nesting, group READMEs) moves from C11 to C9 (shared, reused by C11); C9 reserves a docs step in `check`, wired by C5's implementation; C9 depends on C5. Implementation order unchanged.
   - C11 writes doc assets and maintains the `dev` doc-assets directory; C15 serves it; C12 gains README image, anchor and alert checks. C2 amendment B6, C3 amendment C3-A1, a C6 amendment (`docs/*` rule ids) and a C4 note.
+
+- **R8 (C7 planning, D132–D137, review and spikes `07a-c7-plan-review.md`):**
+  - C7: the runner decides where Vitest runs (root or per package, configs looked up only in each run directory, D132, D134); `detect` is "Vitest declared or a Vitest config"; `vitest/node` resolves from each run directory; the refined process rule (restore timing, removing Vitest's process handlers); newer majors tried with a warning (D133); the environment is left alone (D137); tests call the runner in-process (spike).
+  - C10: `runTests` passes `ctx.repo`; units under `failedRoots` are `unavailable` (D135). `testRunner` is root-only (D136, C6 warns in package configs, C8 schema).
+  - C2 amendment B7, a C4 amendment (`copyFixture` links every `node_modules`), a C6 amendment (`testRunner` in package configs, runners get `ctx.repo`).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -191,12 +196,12 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 
 - **Goal:** the D3 prepackaged runner.
 - **Requirements:**
-  - Runs the showcased repo's Vitest via the Vitest Node API, using the repo's own vitest install and config.
+  - Runs the showcased repo's Vitest via the Vitest Node API, using the repo's own vitest install and config. **The runner decides where it runs (R8, D132, D134):** once at the repo root, or once per package, with configs looked up only in each run directory and passed explicitly; a failing per-package instance reports `failedRoots` (D135).
   - Returns the **raw** C2 test hierarchy (file → describe → test, with status, duration and error message). Mapping results to units is the module's job (D42), not the runner's.
   - Watch mode that streams updates (D18).
-  - `detect(repo)`: vitest in deps, `vitest.config.*`, a `test` block in `vite.config.*`, workspace/projects config (D42).
+  - `detect(repo)`: Vitest declared in a manifest, or a `vitest.config.*` / (3.x) workspace file (D42; R8: not a `vite.config` alone, not "`vitest/node` resolves").
   - A failing test never throws (D8).
-  - **Proven by the spike (`01c-spike-results.md`, D94):** `createVitest` + the reporter API (`onTestRunStart`, `onTestModuleEnd`, `onTestRunEnd`), `vitest/node` resolved from the repo root via `createRequire`; supported range `^3.2 || ^4 || ^5`; restore `process.env` and `process.exitCode` after each run; "no tests" = completed; results carry `project` and `unhandledErrors`; no port/HMR isolation needed next to our Vite.
+  - **Proven by the spike (`01c-spike-results.md`, D94):** `createVitest` + the reporter API (`onTestRunStart`, `onTestModuleEnd`, `onTestRunEnd`), `vitest/node` resolved via `createRequire` from each run directory (R8); supported range `^3.2 || ^4 || ^5`, newer majors tried with a warning (D133); restore `process.exitCode` and `process.env` (in `watch`: the exit code after every rerun, the env when watching stops) and remove Vitest's process signal/exit handlers (R8, C2 B7); leave the environment otherwise alone (D137); "no tests" = completed; results carry `project` and `unhandledErrors`; no port/HMR isolation needed next to our Vite.
 - **Depends on:** C2.
 
 ### C8 — React base: Node side (`-base-react`)
@@ -244,7 +249,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
     - `@vitejs/plugin-react`;
     - react/react-dom **resolved and deduped from the showcased repo**; a repo without React gets a React bundled with `-base-react` (D91) (pitfall: duplicate React). The dedupe also covers module runtime files living in the CLI's `node_modules`, and the module's packages must not pull in their own React copy through peer auto-install;
     - respects the repo's tsconfig paths;
-  - **Base class `runTests`** (D42): `ctx.loadTestRunner` → run / watch → map raw results to units (by unit directory, incl. nested units, D36) → return / push via `ctx.reportTestUpdate`.
+  - **Base class `runTests`** (D42): `ctx.loadTestRunner` → run / watch with `{ repo: ctx.repo }` (R8, C2 B7) → map raw results to units (by unit directory, incl. nested units, D36; units under `failedRoots` `unavailable`, D135) → return / push via `ctx.reportTestUpdate`.
   - **App:**
     - hash router;
     - nav tree (repo → packages → units, D19; nested units are both pages and parents, D36);

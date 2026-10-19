@@ -1,6 +1,6 @@
 # Chunk plan C2: Plugin contracts (`@ofzza/tsshowcase-api`)
 
-> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Editorial corrections from the checkpoint review (`01b-checkpoint-review.md`: `check` and `outDir` in the config sketch, the dev stylesheet bullet, inclusion constants, wording) and two decisions from it (D92 bare elements only inside `.tss-content`, D93 `build [outDir]`) were applied on 2026-10-18 with the user's approval. **Amendment B2 (prototype spikes, `01c-spike-results.md`) re-approved 2026-10-18:** test-runner contract additions (`project`, `unhandledErrors`, `repoRoot`, substring filters, process restore, no-tests = completed, best-effort `removed`) and rule 7's `!important`/setup-option/stacking/event notes. **Amendment B3 (review before wave P3, `01d-pre-p3-review.md`) re-approved 2026-10-18 with super-plan R4:** rule 7, shell-mode showcases get no scheme selector (D100); §5.5 and §10, `include` and the marker-file skip (D101); §5.8, `BuildContext.themes` narrowed to name, label and scheme (D102). **Amendment B4 (C4 planning, `04a-c4-plan-review.md`) re-approved 2026-10-18 with the C4 plan and super-plan R5:** §4 `VcsInfo` without `defaultBranch`, `{path}` the only template placeholder (D110); §5.3/§5.5 `read`/`exists`/`list` treat ignored paths as nonexistent unless `{ ignored: true }`, `.git`/`node_modules` never reachable, `DirectoryListing` of `DirectoryEntry` descriptors, lexical root boundary (D108); §5.4/§5.5 "every scanned directory" and the scan rules (D103, D109); §10 `include` → `scope`, `exclude` → `ignore`, `vcs` keys (D107, D110). **Amendment B5 (C6 planning, `06a-c6-plan-review.md`) re-approved 2026-10-19 with the C6 plan and super-plan R6:** §5.11 path- and reference-marked module options resolved per source by the CLI, `OPTION_FORMAT` in `module/` (D116); §5.7 relative `file:` references resolve against the repo root (D114, D116); §10 wording: the schemas live in `config-schema/` and are copied to the package root by the CLI's build (C6 §5). **Amendment B6 (C5 planning, `05a-c5-plan-review.md`) approved 2026-10-19 with the C5 plan and super-plan R7:** §4 `Doc.assets` / `DocAsset` (D120); §5.6 `heading` is any element id C5 produced or kept, link mapping refined (D121, D124, D128); §5.8 `DevContext.docAssetsDir` (D125), `BuildResult.files` excludes doc assets; §5.9 `check` reports `docs/*` issues (D123); §8 rules 1, 2 and 6 (reserved `tss-assets/`, README content exception, URLs relative to the site root), `DOC_ASSETS_DIR`. Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 5, 2026-10-18; review triage in `02a-c2-plan-review.md`). Amendment B1 from C3 planning (catalogue filled, theme stylesheets, isolation; D81–D90) **re-approved** with the C3 plan (2026-10-18). The catalogue slot is filled; the plan is closed. Editorial corrections from the checkpoint review (`01b-checkpoint-review.md`: `check` and `outDir` in the config sketch, the dev stylesheet bullet, inclusion constants, wording) and two decisions from it (D92 bare elements only inside `.tss-content`, D93 `build [outDir]`) were applied on 2026-10-18 with the user's approval. **Amendment B2 (prototype spikes, `01c-spike-results.md`) re-approved 2026-10-18:** test-runner contract additions (`project`, `unhandledErrors`, `repoRoot`, substring filters, process restore, no-tests = completed, best-effort `removed`) and rule 7's `!important`/setup-option/stacking/event notes. **Amendment B3 (review before wave P3, `01d-pre-p3-review.md`) re-approved 2026-10-18 with super-plan R4:** rule 7, shell-mode showcases get no scheme selector (D100); §5.5 and §10, `include` and the marker-file skip (D101); §5.8, `BuildContext.themes` narrowed to name, label and scheme (D102). **Amendment B4 (C4 planning, `04a-c4-plan-review.md`) re-approved 2026-10-18 with the C4 plan and super-plan R5:** §4 `VcsInfo` without `defaultBranch`, `{path}` the only template placeholder (D110); §5.3/§5.5 `read`/`exists`/`list` treat ignored paths as nonexistent unless `{ ignored: true }`, `.git`/`node_modules` never reachable, `DirectoryListing` of `DirectoryEntry` descriptors, lexical root boundary (D108); §5.4/§5.5 "every scanned directory" and the scan rules (D103, D109); §10 `include` → `scope`, `exclude` → `ignore`, `vcs` keys (D107, D110). **Amendment B5 (C6 planning, `06a-c6-plan-review.md`) re-approved 2026-10-19 with the C6 plan and super-plan R6:** §5.11 path- and reference-marked module options resolved per source by the CLI, `OPTION_FORMAT` in `module/` (D116); §5.7 relative `file:` references resolve against the repo root (D114, D116); §10 wording: the schemas live in `config-schema/` and are copied to the package root by the CLI's build (C6 §5). **Amendment B6 (C5 planning, `05a-c5-plan-review.md`) approved 2026-10-19 with the C5 plan and super-plan R7:** §4 `Doc.assets` / `DocAsset` (D120); §5.6 `heading` is any element id C5 produced or kept, link mapping refined (D121, D124, D128); §5.8 `DevContext.docAssetsDir` (D125), `BuildResult.files` excludes doc assets; §5.9 `check` reports `docs/*` issues (D123); §8 rules 1, 2 and 6 (reserved `tss-assets/`, README content exception, URLs relative to the site root), `DOC_ASSETS_DIR`. **Amendment B7 (C7 planning, `07a-c7-plan-review.md`) approved 2026-10-19 with the C7 plan and super-plan R8:** §6 `RunnerRepoInput` gains `layout`/`info?`, `TestRunOptions.repo` replaces `root`/`repoRoot` and `files` become repo-relative paths (D132), `RawTestReport.failedRoots` (D135), suite `error?`, `unhandledErrors` replacement semantics in updates, aborts resolve with `error`, the refined process rule (restore timing, removing the tool's process handlers); §4.2 `failedRoots` units are `unavailable`; §5.7 sample and wording, `testRunner` root-only (D136); §5.11 the same. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal
 
@@ -209,7 +209,7 @@ export interface ShowcaseEntry {
 ```ts
 export type UnitTests =
   | { readonly status: 'not-run' } // `--no-tests`, or the module has no runTests
-  | { readonly status: 'unavailable'; readonly reason: string } // no runner detected, or the runner crashed (D42)
+  | { readonly status: 'unavailable'; readonly reason: string } // no runner detected, the runner crashed (D42), or the unit lies under a failedRoots directory (B7, D135)
   | { readonly status: 'available'; readonly summary: TestSummary; readonly files: readonly TestFileResult[] };
 
 export interface TestSummary {
@@ -222,7 +222,7 @@ export interface TestSummary {
 }
 ```
 
-`TestFileResult` is the runner's raw shape (§6). A unit with no test files is `available` with zero files; whether that is acceptable is a `verify` concern (D37/D38), not a data concern. A unit **absent** from the module's `TestResults.units` gets `available` with zero files when the runner ran, otherwise the overall status (`not-run` / `unavailable`).
+`TestFileResult` is the runner's raw shape (§6). A unit with no test files is `available` with zero files; whether that is acceptable is a `verify` concern (D37/D38), not a data concern. A unit **absent** from the module's `TestResults.units` gets `available` with zero files when the runner ran, otherwise the overall status (`not-run` / `unavailable`). A unit under a directory in `RawTestReport.failedRoots` is `unavailable` with that error's message (B7, D135), not "available with zero files".
 
 ### 4.3 Root vs package docs, and the single-package collapse
 
@@ -474,13 +474,13 @@ async runTests(ctx: TestContext) {
     ctx.reportTestUpdate({ revision: next(), units: remapAll(units) });
   });
   const loaded = await ctx.loadTestRunner(this.options.testRunner, { candidates: ['vitest'] });
-  // … loaded.runner.watch(…, (update) => ctx.reportTestUpdate(mapToUnits(update, units)))
+  // … loaded.runner.watch({ repo: ctx.repo, signal: ctx.signal }, (update) => ctx.reportTestUpdate(mapToUnits(update, units))) // B7
 }
 ```
 
 In `watch` mode `runTests` resolves with the first complete result and keeps calling `reportTestUpdate` until `signal` aborts. (Renamed from D42's `ctx.onTestUpdate`: `on…` names are subscriptions elsewhere, and `DevContext.onTestUpdate` is the opposite direction, CLI → dev server.)
 
-Paths: `TestFileResult.file` is always repo-relative, even when `TestRunOptions.root` is a package directory. **Deletions (B2):** after a `dev` re-analysis, the CLI's own watcher is the reliable source of removed test files; a runner's `removed` is best-effort (Vitest has no public unlink event).
+Paths: `TestFileResult.file` is always repo-relative, whichever directories the runner ran its tool in (B7: the runner decides, D132). `testRunner` is read from the root options only (D136). **Deletions (B2):** after a `dev` re-analysis, the CLI's own watcher is the reliable source of removed test files; a runner's `removed` is best-effort (Vitest has no public unlink event).
 
 ### 5.8 `build` and `dev` (D43)
 
@@ -590,7 +590,7 @@ static readonly optionFlags = { 'test-runner': 'testRunner', kind: 'scaffold.kin
 - **Collisions:** a flag that clashes with a CLI flag is a load-time error naming the module; the CLI reserves its own names.
 - Flags are accepted on every action, even where unused. Options that only make sense as flags (e.g. `scaffold.kind`) are still valid in config files; their schema `description` says so.
 
-`testRunner` (D34) is a **module option by convention**: modules that run tests should accept `testRunner?: string` (marked `format: OPTION_FORMAT.reference`, below) and pass it to `ctx.loadTestRunner()`.
+`testRunner` (D34) is a **module option by convention**: modules that run tests should accept `testRunner?: string` (marked `format: OPTION_FORMAT.reference`, below) and pass it to `ctx.loadTestRunner()`. It is a **root-only** option (B7, D136): one runner per repo; the CLI warns about and drops it in package configs.
 
 **Path-valued options (B5, D116).** A module marks string options holding filesystem paths with `format: 'tsshowcase-path'` and options holding plugin references with `format: 'tsshowcase-reference'` (`OPTION_FORMAT = { path, reference } as const`, exported from `module/`). Before merging root config, package configs and flags, the CLI makes relative values absolute against the base of the source they were written in (the config file's directory, the package config's directory, the process cwd for flags; D112); for references only `file:` values are rewritten (D114). Markers may sit on properties, array `items` and `additionalProperties` (through local `$ref`s), never under `oneOf`/`anyOf`/`allOf`/conditionals (a load-time error). Modules therefore see absolute paths and absolute `file:` references only. Mechanics: C6 §9.4.
 
@@ -611,14 +611,15 @@ export interface TestRunner {
 
 export interface RunnerRepoInput {
   readonly root: string; // absolute
+  readonly layout: 'single' | 'workspace'; // B7
+  readonly info?: PackageInfo; // B7: the root manifest, if any; RepoInput stays assignable, so modules pass ctx.repo
   readonly packages: readonly PackageInput[];
   readonly files: RepoFiles;
 }
 
 export interface TestRunOptions {
-  readonly root: string; // absolute; where to run the showcased repo's own tool
-  readonly repoRoot: string; // absolute; results are reported relative to it (B2)
-  readonly files?: readonly string[]; // optional filter: substring patterns (Vitest semantics), not exact paths (B2)
+  readonly repo: RunnerRepoInput; // B7: replaces root/repoRoot; the runner decides where its tool runs (D132) and reports paths relative to repo.root
+  readonly files?: readonly RepoPath[]; // B7: optional filter, repo-relative files or directories (prefix match)
   readonly signal: AbortSignal;
 }
 
@@ -627,12 +628,13 @@ export interface RawTestReport {
   readonly error?: TestError;
   readonly files: readonly TestFileResult[]; // "no tests found" is status 'completed' with files: [] (B2)
   readonly unhandledErrors?: readonly TestError[]; // errors not attached to a file, e.g. TS syntax errors that make type tests unreliable (B2)
+  readonly failedRoots?: readonly { readonly dir: RepoPath; readonly error: TestError }[]; // B7, D135: directories where the tool couldn't run while others did (all of them with status 'error'); their units become 'unavailable'
 }
 
 export interface RawTestUpdate {
   readonly files: readonly TestFileResult[]; // full replacement per listed (file, project)
   readonly removed?: readonly { readonly file: RepoPath; readonly project?: string }[]; // best-effort; the CLI's dev watcher is the reliable source of deletions (B2)
-  readonly unhandledErrors?: readonly TestError[];
+  readonly unhandledErrors?: readonly TestError[]; // B7: when present, replaces the previous set (an empty array clears it); absent leaves it unchanged
 }
 
 export interface TestFileResult {
@@ -640,12 +642,12 @@ export interface TestFileResult {
   readonly project?: string; // B2: the test tool's project name; a file can appear once per project, so identity is (file, project)
   readonly status: TestStatus;
   readonly durationMs?: number;
-  readonly error?: TestError; // file-level failure (e.g. a syntax error); its tests are then absent
+  readonly error?: TestError; // file-level failure: a syntax error (then without children) or e.g. an afterAll failure (B7)
   readonly children: readonly TestNode[];
 }
 
 export type TestNode =
-  | { readonly type: 'suite'; readonly name: string; readonly status: TestStatus; readonly children: readonly TestNode[] }
+  | { readonly type: 'suite'; readonly name: string; readonly status: TestStatus; readonly error?: TestError; readonly children: readonly TestNode[] } // error: e.g. a failing beforeAll (B7)
   | { readonly type: 'test'; readonly name: string; readonly status: TestStatus; readonly durationMs?: number; readonly error?: TestError };
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'todo' | 'running' | 'queued';
@@ -659,7 +661,8 @@ export interface TestError {
 ```
 
 - **Never throws on failing tests (D8).** A failing test is `status: 'failed'`. A runner that can't run at all returns `status: 'error'` rather than throwing, where it can.
-- **Leaves the process as it found it (B2):** a runner restores `process.env` and `process.exitCode` after every run (Vitest sets `NODE_ENV=development` and `exitCode = 1` on failures, which would turn a later `vite build` into a dev build and make `build` exit non-zero, against D8).
+- **Leaves the process as it found it (B2, refined by B7):** in `run`, a runner restores `process.env` and `process.exitCode` after the run; in `watch`, `process.exitCode` after every rerun (only when the tool changed it) and `process.env` when watching stops (Vitest sets `NODE_ENV=development` and `exitCode = 1` on failures, which would turn a later `vite build` into a dev build and make `build` exit non-zero, against D8). A runner also removes process-wide signal, exit and `unhandledRejection` handlers its tool installs (Vitest's call `process.exit()`).
+- **Aborts don't throw (B7):** an aborted `run`/`watch` resolves with `status: 'error'`.
 - **No tests found** is `status: 'completed'` with no files, not an error (B2).
 - Type tests (`*.test-d.ts`, D38) appear as ordinary files and tests.
 - The runner knows nothing about units; the module maps (D42).
@@ -840,7 +843,7 @@ A unit test asserts every class starts with `tss-` and every variable with `--ts
   - `verify` can't return both `ignored` and `issues` (`@ts-expect-error`); `UnitTests` narrows by `status`;
   - **principle 2 guard:** a recursive `AssertJsonSafe<T>` type (rejects functions, `Map`, `Set`, `Date` and class instances; allows readonly arrays and optional members) applied to `ShowcaseData` and `TestResultsUpdate`. A plain `JsonValue` assignability check can't work: interfaces have no index signature, readonly arrays aren't `JsonValue[]`, and optional members include `undefined`.
 - **Compat guard (D13, D80):** `src/compat/v0.1.test-d.ts` holds frozen minimal implementations written against the current contract. A change that would break them (a new required member, a narrowed type) fails CI. Before 1.0, a deliberate breaking change bumps the `-api` minor and replaces the guard file (`v0.2.test-d.ts`); from 1.0, files for later minors are added next to it and never edited (additive-only).
-- **README samples:** every unit README carries a type-checked sample (D56); the `module/` README sample is a complete, minimal no-op module.
+- **README samples:** every unit README carries a type-checked sample (D56); the `module/` README sample is a complete, minimal no-op module; the `testrunner/` sample and the compat guard's runner follow B7's `TestRunOptions`.
 
 ## 13. Documentation
 

@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19); R8 (C7 planning) **re-approved** together with the C7 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19); R8 (C7 planning) **re-approved** together with the C7 plan (2026-10-19); R9 (C15 planning) **re-approved** together with the C15 plan (2026-10-19). Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Revisions
 
@@ -48,6 +48,11 @@
   - C7: the runner decides where Vitest runs (root or per package, configs looked up only in each run directory, D132, D134); `detect` is "Vitest declared or a Vitest config"; `vitest/node` resolves from each run directory; the refined process rule (restore timing, removing Vitest's process handlers); newer majors tried with a warning (D133); the environment is left alone (D137); tests call the runner in-process (spike).
   - C10: `runTests` passes `ctx.repo`; units under `failedRoots` are `unavailable` (D135). `testRunner` is root-only (D136, C6 warns in package configs, C8 schema).
   - C2 amendment B7, a C4 amendment (`copyFixture` links every `node_modules`), a C6 amendment (`testRunner` in package configs, runners get `ctx.repo`).
+
+- **R9 (C15 planning, D138–D145, spike `15a-c15-spike-results.md`, review `15b-c15-plan-review.md`):**
+  - C15 rewritten from its plan: own CSS pipeline for theme and module CSS (`?tss-css`) instead of `?inline` processing, no `fs.allow` additions (D144); the showcase Vite config option (D138), `.env` off (D139), showcase loaders (D140), test updates (D141), `resolve.tsconfigPaths` (D142), `dev` never sets `process.env` (D143); protected config keys; a dev snapshot that survives reloads.
+  - C10: `syncDocument` after `data-theme` is applied, module CSS as `?tss-css`, the `viteConfig` option (root-only with `showcaseStylesheets`/`showcaseSetup`, D145). C11: a change to the showcase Vite config needs a `dev` restart.
+  - C2 amendment B8 and C3 amendment C3-A2 (wording); a C6 amendment (module options root-only by default, per-package ones marked in the schema, D145, D148).
 
 ## Packages (D14, D15, D26, D27, D43)
 
@@ -260,7 +265,7 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **Isolation (D89, C3 §1):** the `<tsshowcase-app>` host and its shadow root (theme shell stylesheet adopted first, then module CSS, via C15's runtime API; `:host { all: initial !important }`; host as a stacking context; document scrolling, no clipping on stage ancestors); each showcase portalled into a light-DOM `[data-tss-showcase]` wrapper assigned to a named slot in its stage (`slot { all: initial !important; display: contents !important; color-scheme }`); the `showcaseStylesheets` and `showcaseSetup` module options (document-level CSS for app typography, H1; a setup module run before showcases mount, e.g. Fluent's Tabster Shadow-DOM API, D95); `isolation: isolate !important` on the host and `!important` on every declaration after `all: initial !important`; no shell handlers reacting to synthetic events bubbled from showcases; every showcase gets a `colorScheme` prop (the React showcase interface) and its own light/dark selector (follows the theme until changed, reset on theme switch, not persisted) with `data-scheme` on the stage; a showcase can opt into rendering inside the shell (D41 showcases); shell overlays inside `.tss-shell`; `data-theme` rendered from C15's theme state; the router scrolls to and focuses route-targeted headings inside the shadow root (`aria-current="location"`); key events from shell inputs stopped at the host, the stage labelled from inside the shadow tree; the smoke render passes a scheme and feature-detects constructable stylesheets (`<style>` fallback). Before locking the technique, a throwaway browser spike is recommended while planning C10/C15.
   - **Responsive layout (D97):** breakpoints live in theme CSS, which overrides layout tokens in its own media queries; module CSS has no length-based media queries. The needed tokens and missing catalogue classes come as a C3 amendment.
   - **Only C3 classes and variables are used** (plus own-prefixed arrangement classes, D86); passes the `-lint` presets (`stylelintConfigs.module`, `eslintConfigs.module`); `tssData` for states.
-  - Consumes the embedded data and the dev live channel provided by `-base-vite` (C15).
+  - Consumes the embedded data and the dev live channel provided by `-base-vite` (C15): fills `ViteApp` (plugin-react, React resolution, `prepareData` keeping the test tree shape, preludes from `showcaseStylesheets`/`showcaseSetup`, the `viteConfig` option; all three root-only, D145), imports its CSS as `?tss-css` (D144), calls `syncDocument` after applying `data-theme`, loads showcases through `loadShowcase` (R9).
 - **Depends on:** C2 (data, test-result and live-channel shapes), C3, C5 (HTML shape), C7 (runner, for `runTests`), C8 (base and the module class), C15 (Vite helper).
 
 ### C11 — CLI `build` + `dev`
@@ -277,21 +282,20 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
   - **`check` first (D76):** `build` and `dev` run the full `check` and print the report; errors fail `build` unless `--no-check` (config `check: false`); `dev` never fails on them.
   - **Group READMEs (D78):** found by C9's hierarchy helper (R7); C11 renders them into `GroupNode.readme`.
   - **Doc assets (D120, D125):** writes every `Doc.assets` file next to the module's files in `build` (rejecting module files under `tss-assets/`; the no-absolute-paths check skips them); in `dev`, keeps the doc-assets directory in the CLI cache, rebuilt per data update, passed as `DevContext.docAssetsDir`.
-  - **`dev`:** the CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).
+  - **`dev`:** a change to the configured themes or to the showcase Vite config (D138) needs a restart (R9). The CLI watches files. README changes are re-rendered, and adding or removing a unit or file triggers re-analysis. The new data is pushed to the module's running dev server (`ctx` update subscription). Test updates come from the module's watch mode (D18, D42).
 - **Depends on:** C3, C5, C6, C7, C9, C10.
 
 ### C15 — Vite pipeline helper (`-base-vite`)
 
 - **Goal:** the reusable Vite build/dev pipeline that modules call (D43). Numbered C15 to avoid renumbering existing chunks.
-- **Requirements:**
-  - API: `build({ data, themes, plugins, entry, resolve… })` → files (`build.write: false`, D64) and `dev({ …, onDataUpdate, onTestUpdate, onThemeStylesheetsUpdate })`.
-  - Data embedding as a virtual module; adopting the CLI's shell stylesheet into the shell's shadow root (constructable stylesheets, with hot reloading of adopted sheets in `dev`) and adding the fonts stylesheet to the document (D82, D89; no scoping here); the theme selection setup (`data-theme` on `.tss-shell`, `prefers-color-scheme` default, persisted choice), per the C2 inclusion rules.
-  - `base: './'`; `server.fs.allow` for module runtime files, the CLI cache directory (theme stylesheets) and theme asset directories outside the repo root.
-  - Dev server, HMR, and pushing data and test updates to the browser (D18).
-  - **Runtime API (D89, H28):** framework-agnostic helpers that C10 (and other frameworks' modules) call: adopt the theme shell stylesheet plus module sheets into a given shadow root in order (with a `<style>` fallback), add the fonts stylesheet to the document, apply dev stylesheet updates (`replaceSync()` from `DevContext.onThemeStylesheetsUpdate`, forwarded over the live channel), theme state (`getInitialTheme()`, `setTheme()`, `subscribe()`), and the document-level `color-scheme`/canvas background plus the `index.html` meta and inline selection script.
-  - Theme stylesheets are processed as toolchain inputs (`?inline`-style, emitting their assets; never `?raw`).
-  - Builds set `mode`/`NODE_ENV=production` explicitly (a test run may leave `NODE_ENV=development` behind; D94).
-  - Serves `DevContext.docAssetsDir` statically at `tss-assets/` in `dev` (D125).
+- **Requirements** (detailed in the C15 plan, R9):
+  - API: `buildSite(ctx, app)` → `BuildResult` (`build.write: false`, D64) and `startDevServer(ctx, app)` → `DevSession`, where `app` (`ViteApp`) carries the module's entry, framework plugins and config, the user's showcase Vite config (D138), preludes (showcase stylesheets and setup) and `prepareData` (L20).
+  - Vite runs with `root` at the repo; a set of **protected config keys** (`configFile: false`, `base: './'`, `appType: 'custom'`, `publicDir: false`, explicit `mode`/`define`, `build.write: false`, the virtual `index.html` input, no debug comments, …) is re-applied after every plugin and checked on the resolved config; `.env` files off by default (D139); `resolve.tsconfigPaths` on by default (D142).
+  - Virtual modules: the data, the themes, the showcase loaders (D140) and the entry; a generated `index.html` with the colour-scheme meta and the inline selection script.
+  - **Own CSS pipeline (D144):** theme stylesheets and module CSS (`?tss-css`) bypass Vite's CSS pipeline and the repo's PostCSS; `url()`s become asset imports; no `fs.allow` additions needed.
+  - Dev server: HMR, a snapshot of the data that survives reloads (test updates merged server-side), data and test updates pushed to the browser with per-stream revisions (D18, D68), theme stylesheet updates as HMR of the themes module, `tss-assets/` served from `DevContext.docAssetsDir` (D125); never sets `process.env` (D143).
+  - **Runtime API (D89, H28):** framework-agnostic helpers that C10 (and other frameworks' modules) call: data and live updates (`applyTestUpdate`, D141), `loadShowcase`, adopting the theme shell stylesheet plus module sheets into a given shadow root in order (with a `<style>` fallback, hot-updated in `dev`), the fonts stylesheet, theme state (`getInitialTheme()`, `setTheme()`, `subscribeTheme()`), and `syncDocument` (document-level `color-scheme`/canvas background, called by the module after it applies `data-theme`).
+  - Builds set `NODE_ENV=production` around the build (D94).
   - Framework-agnostic: no React knowledge.
 - **Depends on:** C2, C3.
 

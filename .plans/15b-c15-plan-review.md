@@ -1,0 +1,53 @@
+# Review of the C15 plan (round 2): triage
+
+A clean-context agent reviewed every plan so far (REQUIREMENT, AGENTS D1–D144, the super-plan R1–R8, C1–C7, the earlier triages, and the C15 spike), focusing on C15 and the changes C15 introduces in other plans (2026-10-19, at the user's request). It checked claims against the spike's Vite 8.3.4 sources (`vite/dist/node/chunks/node.js`, the Rolldown types) and its output; nothing was modified.
+
+**Verdict:** C15 is consistent with the contracts and the decision log, apart from the points below. The main risks are:
+
+- enforced keys that a user config can bypass;
+- leftover path leaks;
+- the dev dependency scan reading the repo's real `index.html`;
+- test results lost on a page reload in `dev`;
+- wording amendments to C2 and C3 that the plan didn't list.
+
+16 findings (S1–S16). Claude's triage for each finding is in the last column. **Status (user, 2026-10-19): resolved.** All group A findings approved as triaged (S1 accepted: "a lot of ceremony, but I understand now why it is needed and I don't have a better suggestion"); S15 → D145 (root-only, not supported per package); S16 approved as recommended (de-duplicate by name). Applied in C15 round 3, with C2 B8, C3-A2, a C6 amendment and super-plan R9.
+
+## A. Apply without a decision
+
+| #   | Sev | Finding | Triage |
+| --- | --- | ------- | ------ |
+| S1  | high | **Enforced keys can be bypassed.** Vite 8's real key is `build.rolldownOptions` (`rolldownOptions ??= rollupOptions`), so a user `rolldownOptions` drops our `input`/`cwd`. Plugin `config()` hooks run after the inline config, and keys are missing from the list (`build.watch`, `build.lib`, `build.ssr`, `experimental.bundledDev`, `server.middlewareMode`, `server.ws: false`, array `output`). | Accept. Enforce under `rolldownOptions` (normalise both names before merging), re-apply in an `enforce: 'post'` `config` hook, assert in `configResolved` (throw on a violation). Extend the §3 table: `build.watch: null`, no `lib`/`ssr`, `experimental.bundledDev: false`, `server.middlewareMode: false`, `server.ws` not `false`, and a single `output` (an array is rejected). One test per key. |
+| S2  | medium | **Path leak not fully fixed.** `cwd = repoRoot` fixes files inside the repo only. The spike's unminified output still has `//#region ../theme-pkg/…`; with a global or npx install that becomes `../../../home/<user>/…`. User-enabled sourcemaps leak the same way through `sources`. | Accept. Enforce Rolldown's `experimental.attachDebugInfo: 'none'` (checked against the 8.3.4 types; verified at implementation) and keep `cwd`. The §9 test puts the module and theme at a different depth outside the fixture. The plan states that a user-enabled sourcemap can leak relative machine paths (C13 documents it). |
+| S3  | medium | **D143 wording and the §9 test are wrong.** Vite's `resolveConfig` sets `NODE_ENV=development` when it is unset. Its dependency optimizer ignores `define` and uses `process.env.NODE_ENV \|\| mode`, so under `NODE_ENV=production` pre-bundled dependencies are production builds. | Accept. Reword D143: "`-base-vite` itself never sets or restores it; Vite sets `development` when unset (consistent with D137)". The test asserts only what we do. The production warning names the pre-bundled dependencies too. |
+| S4  | medium | **The dev dependency scan reads the repo's real `index.html`** (`computeEntries` and the scan plugin read from disk, bypassing `load`). A repo app's HTML gets scanned and pre-bundled; without one there are no entries. The spike's "never read" holds for builds only. | Accept. Enforce `optimizeDeps.entries` = `app.entry`, the preludes and the showcase files. Add a dev test with a readable repo `index.html` that imports a missing module. |
+| S5  | medium | **The showcase-table HMR accept can swallow edits.** Edits to non-refresh-boundary showcase files (e.g. a D96 showcase exporting `shell` next to its default; plain `.ts` helpers) propagate to the table module, which "accepts" them without anything re-rendering. | Accept the first option. The runtime's showcases module accepts an update only when the file set changed; otherwise it calls `import.meta.hot.invalidate()` (full reload). React-refresh boundaries are unaffected (C10). C12 verifies `hot.accept` from the published `dist/runtime` inside `node_modules`. |
+| S6  | medium | **`syncDocument` runs too early.** React renders `data-theme` after the theme subscriber is notified, so the runtime's automatic call reads the old theme's `--tss-surface`. | Accept. Calling `syncDocument` after applying `data-theme` becomes the module's duty (C10: a layout effect); the automatic call is dropped. |
+| S7  | medium | **Unlisted amendments to approved plans.** C2 §5.8 (last bullet) and §8 rule 3 say the module applies the pushed contents, but C15 re-reads the files. C3 §5 "Handing over" mentions the live channel, `replaceSync` and `fs.allow`, and its browser-support note says Vite's `cssTarget` lowers nesting, which no longer applies to theme and module CSS. `data-tss-initial-theme` is in no constant list. | Accept as wording amendments approved with C15 (C2 B8, C3-A2). `onThemeStylesheetsUpdate` stays in the contract: it is the trigger, and the contents serve modules that don't read files. **Simplify:** drop `data-tss-initial-theme`; `getInitialTheme()` re-runs the same `selectTheme` on the same inputs. |
+| S8  | medium | **`postcss-value-parser` parses values, not stylesheets.** Rejecting `@import`, skipping comments, and not touching `url(` in selectors or strings all need a stylesheet parser. Sass output may carry `sourceMappingURL` comments. | Accept. Parse with `postcss`, then the value parser on declaration values (including `@font-face src`). Strip `sourceMappingURL` comments. Keep `?#iefix`/`#id` suffixes, resolving the path part only. A missing asset is an error naming the CSS file. `postcss` becomes a dependency. |
+| S9  | high | **A page reload in `dev` loses test results.** Test updates only go over the WebSocket; the stored snapshot changes only on `onDataUpdate`. Also, data and test revisions come from different producers, and messages sent before the runtime's listener exists are lost. | Accept. `-base-vite` keeps the unprepared `ShowcaseData`, applies `applyTestUpdate` to it server-side on every test update, and invalidates the data module (no HMR). One revision counter per stream (data, tests). On connect, the runtime sends `tsshowcase:hello` with its last revisions, and the server replies with newer state if it has any. |
+| S10 | low | **Inline script robustness.** A `</script>` or `<!--` in a theme label breaks the page. `Function.prototype.toString` breaks if build or coverage instrumentation injects helpers. | Accept. Escape `<` as `\u003c` in the embedded JSON. Keep `selectTheme` helper-free and excluded from coverage instrumentation. The test evaluates the serialised text with `new Function`. `<html lang="en">` (the shell's UI language). |
+| S11 | low | **The dev server exposes the whole repo,** gitignored files included (only `fs.deny` applies). With `--host`, that reaches the network. | Accept. Warn when the host isn't loopback; C13 documents it. Keep `fs.deny` at Vite's default (secrets patterns). |
+| S12 | low | **Runtime types.** `getData()` returns `JsonValue`, while `applyTestUpdate` takes `ShowcaseData`. | Accept. `getData<T = ShowcaseData>()` and `onData<T>`. `applyTestUpdate` is typed structurally over a tree of nodes with `dir`/`tests`/`children`. The `prepareData` contract: keep that tree shape. |
+| S13 | low | **Layout:** `runtime/` beside `src/` breaks the single `unitRoot` (C2 §5.4). The runtime tests' happy-dom differs from the jsdom used elsewhere. | Accept. Move it to `src/runtime/`, with its own `dom` tsconfig; use jsdom. |
+| S14 | low | **Small items:** `sirv` needs `dev: true`. Libraries that reassign `document.adoptedStyleSheets` drop our fonts sheet. A second `adoptShellStylesheets` call is undefined. `loadConfigFromFile`'s `bundle` loader writes `node_modules/.vite-temp/` into the repo. Windows paths in specifiers. Subscribing before `listen()`. A `DevSession.url` fallback. | Accept all:<br>• `sirv` with `dev: true`;<br>• the fonts sheet as a `<style>` element in `<head>`;<br>• a repeat `adoptShellStylesheets` replaces the module sheets and keeps the theme sheet, and one shared `CSSStyleSheet` serves every shadow root;<br>• config loading with `configLoader: 'runner'` and a `configEnv` carrying the enforced `mode` (no writes into the repo); a change to the showcase Vite config needs a restart (C11, C13);<br>• `normalizePath` for every generated specifier and virtual id;<br>• subscribe before `listen()`;<br>• `url` falls back to `resolvedUrls.network[0]`. |
+
+## B. Needs a decision
+
+| #   | Sev | Finding | Recommendation |
+| --- | --- | ------- | -------------- |
+| S15 | medium | **Per-package values of the showcase Vite config option.** Module options merge per package (D69), but there is one Vite build and one document. Per-package `viteConfig`, `showcaseStylesheets` and `showcaseSetup` values have no meaning. | **Recommended:** all three are root-only, like `testRunner` (D136): a C6 amendment that warns about and drops them in package configs (generalising C6's `testRunner` rule to a list), and the C8 schema descriptions say so. *Alternative:* `viteConfig` root-only, with stylesheets and setup merged as the union over all packages. |
+| S16 | low-medium | **Duplicate plugins in the showcase Vite config.** A reused app config often contains `@vitejs/plugin-react`, which would duplicate the module's own copy. Also, plugins written for Vite ≤ 7 now run under Vite 8 / Rolldown. | **Recommended:** de-duplicate by plugin name with a warning (the module's copy wins), and document that the config runs under Vite 8. *Alternative:* document only. |
+
+## Checked and fine (reviewer)
+
+- **Spike claims confirmed against the source:**
+  - `base: './'` resolves to `/` in `dev`;
+  - `resolve.tsconfigPaths` exists;
+  - the `appType: 'custom'` middleware stack;
+  - the order of middlewares registered in `configureServer`;
+  - the `define` replacement in `dev` source code;
+  - the build `NODE_ENV` guard (including the delete-on-restore), which doesn't conflict with C7 §7.
+- `-base-vite` uses only the C2 §5.8 contexts. The doc assets match B6, D120 and D125.
+- Every open point in the AGENTS C15 row is answered.
+- D138–D144 are consistent with D64, D77, D89/D90, D102, D116 and D137, apart from S3.
+- Rejecting `@import` in module CSS only is consistent: theme CSS arrives already inlined (C3 §5).

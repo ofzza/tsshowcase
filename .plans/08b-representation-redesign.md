@@ -1,12 +1,12 @@
 # Representation redesign (from C8 planning)
 
-> Status: **revision 3.1, DRAFT for review** (2026-10-20). Revision 1 was approved on 2026-10-19 and reviewed (`08c-redesign-review.md`, decisions X1–X13, clarifications Y1–Y16); revision 2 folded those in and was reviewed by four focused reviewers (`08d-redesign-review.md`, decisions Z1–Z18, clarifications V1–V12); revision 3 folded in everything decided since and was reviewed for clarity and self-sufficiency (`08e-redesign-review.md`, decisions E1–E8, fixes F1–F9). This revision applies E1–E7 and F1–F9. Nothing here is applied to the approved plans yet; §11 lists every touched decision with its verdict and §12 the affected plans, in application order. Once approved, the decisions are recorded in AGENTS.md (D160+) and the plans revised one by one (§12); after that this document becomes history and the plans and D160+ are authoritative (E6).
+> Status: **revision 3.1, DRAFT for review** (2026-10-20). Revision 1 was approved on 2026-10-19 and reviewed (`08c-redesign-review.md`, decisions X1–X13, clarifications Y1–Y16); revision 2 folded those in and was reviewed by four focused reviewers (`08d-redesign-review.md`, decisions Z1–Z18, clarifications V1–V12); revision 3 folded in everything decided since and was reviewed for clarity and self-sufficiency (`08e-redesign-review.md`, decisions E1–E8, fixes F1–F9). This revision applies E1–E7 and F1–F9; the choices it made beyond them were reviewed one by one with the user (08e, G1–G8, all settled). Nothing here is applied to the approved plans yet; §11 lists every touched decision with its verdict and §12 the affected plans, in application order. Once approved, the decisions are recorded in AGENTS.md (D160+) and the plans revised one by one (§12); after that this document becomes history and the plans and D160+ are authoritative (E6).
 
 ## 0. Principles
 
 1. **Stages with clear interfaces first.** Each stage of the pipeline (§3) must be serviceable, not perfect. Rules *inside* a stage (how resources associate, which issues are raised, defaults) may be refined later, once real examples run, as long as the interfaces between stages stay stable.
 2. **The target is the user's own repositories, mainly new ones**, built to conventions the user is happy to live with. Sane, practical requirements matter; making every existing repository layout work does not.
-3. **Presentation belongs to the module.** The CLI provides facts (symbols, associations, nodes, test results, issues) in a defined default order; what is shown, hidden, merged or summarised is the module's choice (coverage, test summaries, home-doc selection). *(Drawn from the outcomes of Z1, Z3 and X7; this attribution is to be confirmed by the user with this revision.)*
+3. **Presentation belongs to the module.** The CLI provides facts (symbols, associations, nodes, test results, issues) in a defined default order; what is shown, hidden, merged or summarised is the module's choice (coverage, test summaries, home-doc selection). *(Drawn from the outcomes of Z1, Z3 and X7.)*
 
 ## 1. Why
 
@@ -100,19 +100,19 @@ interface ScannedDirectory {
 interface ScannedFile {
   path: RepoPath;
   name: string;
-  roles: FileRole[];
+  roles: FileRole[]; // which roles are present depends on the stage: §3.1
 }
 
 type FileRole = 'exporting' | 'doc' | 'test' | 'showcase' | 'config'; // open union
 ```
 
 - **Roles:** `doc` = a `.md` file, or a `README`/`LICEN[CS]E`/`CHANGELOG` in a non-markdown form where §4.3 and §7.8 accept one; `config` = a directory config file; `test` = listed by a runner (§4.2); `exporting` = at least one symbol (§4.1); `showcase` = at least one showcasing component. A file may have several roles; `test` and `showcase` are exclusive (a file that is both counts as a test, §4.3).
-- The tree in `AnalyzeContext` carries only the CLI's scan-time roles (`doc`, `config`); every later context (verify, scaffold, build, dev) gets a tree with every role.
+- **Roles depend on the stage (G6; documented on `AnalyzeContext.tree` and `ScannedFile.roles`):** the tree in `AnalyzeContext` carries only the CLI's scan-time roles, `doc` and `config`. `exporting` and `showcase` are what `analyze` itself produces, and `test` is left out so that the CLI can list test files **in parallel** with the analysis; a module that needs to know about tests matches file names itself. Every later context (verify, scaffold, build, dev) gets a tree with every role.
 
 ### 3.2 `scope`, package-relative
 
 - `scope` lists paths and globs **relative to each package** (in a single-package repo, the repo root). Default `['.']`. A match includes everything below it.
-- Set in the root config as the default for every package, overridable in a package config. `--scope` applies to every package; one "unmatched" warning per entry, printed only when the entry matches in no package (a log warning, not a check issue).
+- Set in the root config as the default for every package, overridable in a package config. `--scope` applies to every package; one "unmatched" warning per entry, printed only when the entry matches in no package; an unmatched config `scope` entry gets the same warning. A printed warning, not a check issue (G5: it concerns the run's arguments or settings, not the repository's structure).
 - The workspace root is never a package (C2 §4.3); a repo with no manifest has no packages and nothing in scope. Running on one package: `skip`/`ignore` (documented). `scope: ['src']` is recommended for typical layouts (documented).
 
 ## 4. Enrichments and associations
@@ -122,7 +122,7 @@ type FileRole = 'exporting' | 'doc' | 'test' | 'showcase' | 'config'; // open un
 ```ts
 interface AnalyzeContext {
   repo: RepoInput;
-  tree: ScannedTree; // scan-time roles only (§3.1)
+  tree: ScannedTree; // roles: only 'doc' and 'config' (exporting/showcase come from this analysis; tests are listed in parallel), §3.1
   signal: AbortSignal; // dev aborts a stale analysis
 }
 
@@ -258,7 +258,7 @@ Schema violations of configs and directory configs stay thrown `ConfigError`s (C
 | `tests/runner-failed` | error | a runner's `detect` throws, or its listing or run fails (§4.2) |
 | `config/several-configs` | error | several directory config files in one directory |
 | `config/collection-clash` | error | a collection key clashes with a real non-member file or a directory (§8.4) |
-| `config/collection-membership` | error | an exporting file named by several collections (§8.4) |
+| `config/collection-membership` | error | an exporting file matched by several collections (§8.4) |
 | `config/kind-conflict` | error | several competing non-ancestor kind overrides (§8.3) |
 | `config/same-base` | error | two exporting files in a directory with the same base (§4.3) |
 | `config/unused-key` | warning | a `kinds` or `exempt` key that matches no symbol, or a `directories` key naming no in-scope directory |
@@ -563,8 +563,8 @@ interface RedesignConfigKeys {
 ### 8.4 Collections
 
 - A **stand-in for one exporting file**, declared in a directory config (`collections: { [key]: members }`): exporting members' symbols merge into one exporting "file" named by the key; the key is its base (used as is) for name matching; members' own name matches are added (union); members never compete with their own collection.
-- **Members are classified like `paths` entries:** exporting files count as members only when named as **plain file names** in the collection's directory (glob matches add resources only); resources are paths or globs relative to the directory (within scope), primary, and a resource may be in several collections; a member that is neither gives `config/no-role`; a missing one `config/missing-path`.
-- An exporting file named by several collections: `config/collection-membership`, it stands alone.
+- **Members are matched exactly like `paths` entries** (G3): plain names, paths and globs relative to the collection's directory, within scope and the package. Every exporting file a member matches becomes an **exporting member** (its symbols merge into the collection), in subdirectories too (`**`); every doc, test or showcase it matches becomes a **resource member** (primary; a resource may be in several collections). A literal member with neither role gives `config/no-role`; a missing one, or a glob matching nothing, `config/missing-path`. A new file matched by an existing glob joins the collection; narrower globs are the remedy for unwanted matches (documented).
+- An exporting file matched by several collections (named or by glob): `config/collection-membership`, it stands alone.
 - The collection's node: path `<dir>/<key>` (virtual), sorting as a file `<key>` (§7.5); members get no direct nodes. A key clashing with a real non-member file or a directory: `config/collection-clash`, the collection isn't created.
 - References to members (`paths`, `kinds`, `exempt`) keep naming the real files; the single-file rule counts a collection as one file.
 
@@ -698,7 +698,7 @@ To be worked through after this revision is approved, **plan by plan in this ord
   - §3: `SymbolKind`, `JsonObject`;
   - §4: the data model replaced (`Representation`, `RepresentableNode`, `RepresentedItem`, `Association`, `ShowcaseAssociation`, `DocRef`, `Tests`, `TestsUpdate`, `RenderedDoc`; `PackageInfo`, `VcsInfo`, `DocAsset`, `DocHeading` kept; `ShowcaseData`, `RepoNode`, `PackageNode`, `UnitNode`/`GroupNode`, `Doc` removed);
   - §5.1: statics `testRunners`, `kinds`; §5.2: required/optional methods (`runTests` removed);
-  - §5.3: `RepoFiles` stays, `DirectoryInput` removed, `ScannedTree`, `FileInput`, `RepoInput`/`PackageInput` revised (`readme`/`licence` dropped, `scope` added), `RepoInput.overrides` removed;
+  - §5.3: `RepoFiles` stays, the stage-dependent roles documented on `AnalyzeContext.tree` and `ScannedFile.roles` (G6), `DirectoryInput` removed, `ScannedTree`, `FileInput`, `RepoInput`/`PackageInput` revised (`readme`/`licence` dropped, `scope` added), `RepoInput.overrides` removed;
   - §5.4: `AnalyzeContext`/`AnalysisResult`, attachment rules, the new validation (replacing D70's), `AnalyzedUnit`, `unitRoot`, `ExportedSymbol.entry/typeOnly` removed;
   - §5.5: per-file `verify`, `VerifyContext`; §5.6: `resolveRoute` with `RouteTarget`, the links subsection;
   - §5.7: replaced by a note (tests are the CLI's; `TestContext`, `loadTestRunner` removed);

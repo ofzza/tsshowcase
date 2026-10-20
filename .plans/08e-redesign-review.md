@@ -1,6 +1,6 @@
 # Redesign revision 3 review triage (`08b-representation-redesign.md`)
 
-> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F and the E outcomes **applied in 08b revision 3.1** (2026-10-20), awaiting the user's review.
+> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F and the E outcomes **applied in 08b revision 3.1** (2026-10-20); the choices 3.1 made beyond them reviewed as group G (end); 08b awaiting the user's approval.
 
 ## Verdicts
 
@@ -46,4 +46,15 @@
 - **E6 (2026-10-20):** once applied, 08b becomes history (banner: "applied; the plans and D160+ are authoritative; kept as design rationale"); AGENTS "Current focus" is removed when the application is complete.
 - **E7 (2026-10-20):** ids: C2 **B9** (the C8 draft's B9 is void), C1 **A4**, C3 **C3-A3**, a "redesign amendment" section in C4, C5, C6, C7, C15, super-plan **R10** (the draft's R10 is void), decisions **D160+** (one per RQ plus the substantive outcomes; draft in 08f). Approval **plan by plan**, each presented, approved and committed: AGENTS (decisions) → C2 → C1, C3–C7, C15 → super-plan R10 → C8.
 
-**Next:** ~~write 08b revision 3.1~~ (done, 2026-10-20); the user reviews and approves 08b; then apply it per E7.
+## Group G: choices made in revision 3.1 beyond E and F (reviewed one by one, 2026-10-20)
+
+- **G1 (ok):** `listTestFiles` returns `TestListing { status, error?, files, failedRoots? }` instead of a plain array, so F7's "`failedRoots` suppress missing-tests" works during `check` (which only lists); the error convention mirrors `RawTestReport`.
+- **G2 (ok):** rule ids for cases E5 didn't name: `config/shadowed` covers both a key set by several sources and a shadowed kind override; a literal directory in `paths` → `config/no-role` with the hint "use `sub/**`"; `paths` into another package → `config/out-of-scope` (warning, ignored); `module/error` defaults to error; an unknown kind value is a thrown `ConfigError` after the module is loaded.
+- **G3 (changed by the user):** collection members are matched exactly like `paths` entries: globs import everything they match, exporting files (symbols, also in subdirectories) and resources alike. Claude had proposed that only plain file names make exporting members; the user preferred consistent globs ("if this produces a lot of errors, that is fine: use a smaller, more precise glob"). An exporting file matched by several collections is `config/collection-membership`; new files matched by a glob join silently.
+- **G4 (ok):** doc-id collisions: the colliding docs take the shortest longer prefix in steps of 4 hex digits; a collision may change an existing doc's id (accepted, collisions are rare).
+- **G5 (ok):** root-config issues are repo-level (no node at a workspace root); an unmatched `--scope` entry, and likewise an unmatched config `scope` entry, is a printed warning, not an issue; `rules` keys or `--rule` ids matching no known rule are printed warnings (as C2 §9 today).
+- **G6 (ok, "document clearly"):** `AnalyzeContext.tree` carries only the `doc` and `config` roles (`exporting`/`showcase` are produced by `analyze`; `test` is left out so listing runs in parallel with analysis); documented on `AnalyzeContext.tree`, `ScannedFile.roles` and in 08b §3.1, and carried into C2 B9.
+- **G7 (ok):** principle 3 stays "drawn from the outcomes of Z1, Z3 and X7"; the "to be confirmed" note is removed.
+- **G8 (ok):** the vouching example is `paths: ["**"]`; verified with picomatch 2.3.1 (`dot: true`): `*/**` skips the directory's own files, `**` matches everything at or below it.
+
+**Next:** ~~write 08b revision 3.1~~ (done, 2026-10-20, with G1–G8 applied); the user reviews and approves 08b; then apply it per E7.

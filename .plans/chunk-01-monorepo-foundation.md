@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Amendment A3 (from C4 planning: the private `-test` package, fixture ignore rules; D104, D109, D107) re-approved 2026-10-18 with the C4 plan; see the end of this file. Note: C3 later adds an eighth package, `-lint` (D88), and C4 a private ninth, `-test` (D104); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Amendment A3 (from C4 planning: the private `-test` package, fixture ignore rules; D104, D109, D107) re-approved 2026-10-18 with the C4 plan; see the end of this file. Note: C3 later adds an eighth package, `-lint` (D88), and C4 a private ninth, `-test` (D104); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3. **Amendment A4 (the representation redesign, `08b-representation-redesign.md`, D160–D200) **approved 2026-10-20** (review `01e-c1-a4-review.md`):** §5 and "Recorded for later chunks": no `ignore: ['/fixtures/']`; §8 the dogfood layout under the representation rules; §9 the layout/glossary wording; §10 trigger rows, single source per fact, the automated checks; §1/§2/§4 `-lint`, the skeleton comment, the entry-file ESLint rule, type tests, extra and opt-in Vitest projects; see "Amendment A4" at the end.
 
 ## Goal
 
@@ -33,6 +33,7 @@ packages/
   tsshowcase-base-vite/                   @ofzza/tsshowcase-base-vite
   tsshowcase-base-react/                  @ofzza/tsshowcase-base-react
   tsshowcase-module-react-default/        @ofzza/tsshowcase-module-react-default
+  tsshowcase-lint/                        @ofzza/tsshowcase-lint             (added by C3, D88: lint rules and presets)
   tsshowcase-test/                        @ofzza/tsshowcase-test             (private, added by C4: test helpers, A3)
 scripts/
   fixtures.mjs                 install / clean the fixtures' own dependencies
@@ -64,7 +65,7 @@ packages/<pkg>/
   README.md              template structure: title, purpose, Get / Usage / Development / Contributing (Usage "under construction")
   LICENSE                copy of the root LICENSE (npm only packs the package's own licence file)
   src/
-    index.ts             entry: file header + `export {};` (no exported units yet)
+    index.ts             entry: file header + `export {};` (no exported symbols yet)
     index.test.ts        wiring test: the entry imports cleanly
 ```
 
@@ -123,21 +124,24 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
   - `@eslint/js` recommended (a direct devDependency, as the template's gotcha requires), `typescript-eslint` recommended (type-aware for `packages/*/src`), and `eslint-config-prettier`;
   - the template's rule tweaks (`_`-prefixed unused vars, args and catch bindings allowed; `no-explicit-any`, `ban-ts-comment`, `no-empty-object-type` off);
   - `.gitignore` included as ignores; `fixtures/**` ignored.
+  - **entry files re-export by name only (A4):** a `no-restricted-syntax` rule bans `ExportAllDeclaration` (`export * from …`) in every package's entry files (the sources of its `exports` subpaths), so the public API is listed explicitly (§8).
   - `eslint-plugin-react-hooks` is scoped to `base-react` and `module-react-default` and added in C10, when there is React code to lint.
   - Stylelint and the D46 styling rules arrive in C3.
 - **Vitest (the template's setup, multiplied by package):**
   - one root `vitest.config.ts` with `reporters: ['tree']` and `test.projects`.
   - **`unit:<pkg>`**, one per package, named after its directory (e.g. `unit:tsshowcase-api`):
     - runs `src/**/*.{test,unit.test,spec,unit.spec}.{ts,tsx}`;
-    - **type-checks the same files** through `tsc` with the package's `tsconfig.json` (`typecheck.enabled`). Type assertions (`expectTypeOf`, `@ts-expect-error`) and type-only test files (`*.test-d.ts`, D38) therefore fail as tests;
+    - **type-checks the same files plus the type-only test files** through `tsc` with the package's `tsconfig.json` (`typecheck.enabled`; `typecheck.include` adds `src/**/*.test-d.{ts,tsx}`, A4, which the runtime pattern doesn't match). Type assertions (`expectTypeOf`, `@ts-expect-error`) and type-only test files (`*.test-d.ts`) are ordinary test files and fail as tests;
     - `typecheck.spawnTimeout: 10000` (the template's Vitest 5 race workaround);
     - like the template, every test file is reported twice, once per pool (gotcha documented);
     - Node environment by default (C10 switches the React packages to jsdom).
-  - **`debug`**, one project across all packages: runtime only, no type checking. It also matches `*.debug.test.ts` scratch tests, which are gitignored.
+  - **Additional projects per package (A4)** where a part of it needs a different environment or tsconfig, named `unit:<pkg>:<part>` (e.g. `unit:tsshowcase-base-vite:runtime` for a `dom`-lib runtime with jsdom tests), each with its own `include` and `typecheck.tsconfig`; the chunk that needs one specifies it (C15, C10).
+  - **`debug`**, one project across all packages: runtime only, no type checking. It also matches `*.debug.test.ts` scratch tests, which are gitignored. **Opt-in (A4):** `vitest.config.ts` includes it only when `TSS_VITEST_DEBUG=1` is set, so a plain `vitest`, CI and tsshowcase's own test listing and runs (D172) see only the `unit:*` projects and never list or run each test twice.
   - Workspace imports resolve via the `source` condition, so tests never need a build.
-- **`.vscode/launch.json`:** the template's three configs ("Debug ALL Test Files", "Debug UNIT Test Files" → `--project "unit:*"`, "Debug Current Test File" → `--project debug`).
+- **`.vscode/launch.json`:** the template's three configs ("Debug ALL Test Files", "Debug UNIT Test Files" → `--project "unit:*"`, "Debug Current Test File" → `--project debug`); the configs using the `debug` project set `TSS_VITEST_DEBUG=1` (A4).
 - **Root scripts** (with `npm-run-all2`, as the template):
   - `clean`, `build` (`prebuild: clean`), `dev` (`tsc -b --watch`), `lint` (ESLint), `format` / `format:check` (Prettier), `typecheck` (root files), `test` (`npm-run-all test:*`; `test:unit` → `vitest run --project "unit:*"`);
+  - `debug` → `TSS_VITEST_DEBUG=1 vitest --project debug` (A4; deliberately not a `test:*` script, so `npm test` and CI never run it);
   - `ci` = `npm-run-all ci:*` → `ci:build`, `ci:typecheck`, `ci:eslint`, `ci:prettier`, `ci:test-unit`, `ci:readme-samples`, `ci:links` (§10), `ci:schemas` (A1);
   - `schemas` → `tsschema generate --mode sidecar "packages/*/src/**/*.schema.json"` (A1); `ci:schemas` → the same with `--check`. `build` runs `schemas`, then `tsc -b`, then `scripts/copy-sidecars.mjs` (A1);
   - `prepare: npm run build` (root only, as the template), `prepublishOnly` guard noted for C14;
@@ -167,7 +171,7 @@ Third-party runtime deps (Vite, React plugin, unified, …) are **not** added in
   - Tests that only read a fixture and are unaffected by the three cases above may use `fixtures/<name>/` in place.
   - It lives in the private `-test` package (C4, D104; A3).
 - C1 ships only `fixtures/README.md` describing this. The first fixtures arrive with C4.
-- When `tsshowcase check` dogfoods this repo (C9), `fixtures/` is ignored via this repo's config `ignore: ['/fixtures/']` (D107). Recorded for C9.
+- When `tsshowcase check` dogfoods this repo (C9), `fixtures/` needs **no** configuration (A4): it lies outside every package (the workspace root is never a package and `workspaces` lists only `packages/*`), so it is never in scope (D165). (Before A4: config `ignore: ['/fixtures/']`.)
 - **Fixture ignore rules (A3, D109):** fixtures carry their own ignore rules in `.tsshowcaseignore` files, which this repo's git doesn't apply, so everything in a fixture gets committed. Fixture content this repo's own `.gitignore` would catch (e.g. a fixture `dist/`) is re-included with `!` rules, at the root, in `fixtures/.gitignore` or in the fixture itself.
 
 ### 6. Versioning: changesets (D31)
@@ -201,12 +205,20 @@ Branch protection (required checks `CI / Node 22`, `CI / Node 24`) is a GitHub s
 
 ### 8. Dogfooding (D41)
 
-- C1 packages export **no units** (`export {};`), so they satisfy the convention trivially. The convention is documented now and binds every later chunk.
-- **This repo's unit layout** (it matches what C8's base rules will enforce):
-  - `packages/<pkg>/src/<Unit>/` is a unit directory: `index.ts` (re-exports the unit's public symbols), `README.md`, `<Unit>.test.ts(x)`, and `<Unit>.showcase.tsx` where D37 requires one;
-  - optional grouping directories (`src/<group>/<Unit>/`, D36) may be used where a package grows large;
-  - each package's `src/index.ts` re-exports its units via `export * from './<Unit>/index.js';`;
-  - `*.showcase.tsx` and `*.test.ts(x)` are excluded from `tsconfig.build.json`, so they never reach `dist`.
+- C1 packages export **no symbols** (`export {};`), so they satisfy the convention trivially. The convention is documented now and binds every later chunk, every package included (also `-lint`, added by C3).
+- **This repo's layout under the representation rules (A4; D161–D163, D171, D173, what `tsshowcase check` enforces):**
+  - **One exporting file per concept:** each public concept is declared in its own file, `packages/<pkg>/src/<area>/<Concept>.ts(x)`, named after its main export in that export's case (`ShowcaseModule.ts`, `issue.ts`). Its symbols are what `check` requires resources for, per the kind requirements (D162, C2 §5.1). A symbol's kind follows what the exported value is, not how it is declared (D200): an arrow function in a `const` is a function and needs tests.
+  - **One `README.md` in every directory that directly contains exporting files,** documenting each of them. A directory README covers only its own directory's files (D173), so a nested directory with exporting files needs its own; directories without exporting files (e.g. `-api`'s `src/compat/`) need none. Extra per-concept docs, when a README gets long, are `<Concept>.md` next to the file (primary, by name).
+  - **Tests and showcases named after the file they cover:** `<Concept>.test.ts(x)`, `<Concept>.showcase.tsx` (by name, primary). With exactly one exporting file in a directory, other resources there belong to it too (strong), but naming them after the file is the convention. Names match exactly (D130); avoid exporting files whose names differ only in extension (`config/same-base`) or only in case.
+  - **Areas** are ordinary directories (`src/version/`, `src/module/`). A `.tsshowcase.jsonc` that is `true`/`{}` or sets a node key (`paths`, `name`, `slug`, `order`) makes its directory a menu level (an indirect node, whose page shows the directory README, D173, D188); one with only `collections`, `kinds` or `exempt` creates no node. In `src/` (the single literal scope path) it configures the package root instead (D179). Otherwise the tree is sparse.
+  - **Concepts split over several files** (e.g. a component, its hook and its render function) are grouped with a `collections` entry in that directory's `.tsshowcase.jsonc` (D190; this alone creates no menu level). The collection is named after the concept (`Button`), and its docs, tests and showcases after that key (`Button.md`, `Button.test.tsx`, `Button.showcase.tsx`); members' own name-matched resources (e.g. `useButton.test.ts`) count for the collection too.
+  - **Entry files only re-export, by name.** Every `exports` subpath's source file (`src/index.ts`, `src/runtime/index.ts`, …) lists the package's public symbols explicitly (`export { ShowcaseModule, type ModuleInit } from './module/ShowcaseModule.js'`), so what is exported is visible and reviewed in one place; `export *` is not used in entry files (an ESLint `no-restricted-syntax` rule enforces it, §4), and default exports are re-exported explicitly. Internals may then live in any file; a `_` prefix is naming only, it never hides an export. **No exporting files directly in `src/`:** public concepts live in area directories (a lone exporting file there would also claim the package's wiring test `src/index.test.ts` through the single-file rule). **Every `exports` subpath carries a `source` condition** (§2), so the analysis maps it to source. `src/bin.ts` exports nothing. No per-concept barrels (`<Unit>/index.ts`) and no `_`-prefixed internal directories are needed: files that declare no public symbol need nothing, wherever they are.
+  - **Public API from dependencies is declared locally:** a type or value from another package that is part of our public API gets a local declaration (`export type JsonSchema = TSSchemaJSONSchema;`), never a bare re-export, so it attaches here and is checked and documented here (declarations in `node_modules` or another workspace package are never attached, D171).
+  - **JSON files:** a JSON file is an exporting file only when its default export is **re-exported from an entry** (e.g. the CLI's `configSchema`, C6); it then needs docs like any constant (D171, D162). JSON files that are only imported (`package.json`, internal options schemas) are not; JSON `exports` subpaths are not analysed (08a U9, carried to C8); tsschema sidecars (`*.d.json.ts`) are never exporting files.
+  - **Directory configs** in this repo are `.tsshowcase.jsonc` files only, placed in the directory they configure: JSONC needs no extra tooling (editors and Prettier infer the parser, no code is executed) and allows comments, e.g. the reason for a `kinds` or `exempt` entry. No `directories` entries in this repo's configs (one place per fact; overlaps would raise `config/shadowed`). The other forms and the configuration they need are documented in C13.
+  - **This repo's root `tsshowcase.config.json`** (written in C9): `scope: ['src']`, so only `src/` is checked, verified and reported and package-root files (manifests, tsconfigs, build output, `-theme-default`'s `css/`) stay out of scope (the package `README.md` and `LICENSE` are home docs either way, D185); `strict: ['check', 'warnings']`, so warnings fail the dogfood check locally and in CI alike (D164, D175). The private `-test` package keeps `{ "skip": true }` (A3, D104). `fixtures/` needs no configuration: it lies outside every package (D165).
+  - **Root documents** (`README.md`, `LICENSE`, `CONTRIBUTE.md`, `AGENTS.md`, `CLAUDE.md`, `REQUIREMENT.md`, later `PUBLISH.md`, and each package's `README.md`, `LICENSE`, `CHANGELOG.md`) are home docs (D185); `check` validates their links and anchors like any other doc's (D183), which `ci:links` keeps clean. Should the verbatim `REQUIREMENT.md` ever fail it, a narrow `rules` override, or an `ignore` of that one file, is the remedy.
+  - **Build exclusions:** every test form (`*.test.*`, `*.unit.test.*`, `*.spec.*`, `*.test-d.*`, `*.debug.test.*`), `*.showcase.tsx` and `src/compat/` are excluded from `tsconfig.build.json`, so they never reach `dist`; directory configs are dotfiles, which TypeScript's wildcard `include`s skip, and `files: ["dist"]` keeps them out of the package.
 
 ### 9. Documentation (D53)
 
@@ -216,7 +228,7 @@ The template's three-way split, adapted:
   - **Keeping documentation and tests current:** the trigger table, extended for this repo (§10);
   - **Project:** what tsshowcase is, licence, ESM only, `files` allowlist, "toolchain last verified against" line;
   - **Branching** and **Commits** (the template's text: commit to the current branch, never to `master` or a detached HEAD, propose feature branches, `develop` trunk / `master` stable, no AI attribution);
-  - **Layout:** the tree above, what each package is for, and the unit convention (§8);
+  - **Layout:** the tree above, what each package is for, and the representation convention (§8, A4);
   - **Commands:** every root script, plus the script wiring rule;
   - **Testing:** the Vitest projects, the typecheck double-reporting, `spawnTimeout`, the `debug` project and scratch tests, the fixtures convention (§5, including when to use `copyFixture()`);
   - **Code style (D10 + the template):**
@@ -235,7 +247,7 @@ The template's three-way split, adapted:
   - **Gotchas and known issues** (§11);
   - **Continuous integration:** the workflow, Dependabot, and the branch-protection note;
   - **Packages:** one line per package linking to its README (which holds the export list; see §10).
-- **`CONTRIBUTE.md`** (contributors): reporting issues and the contribution workflow (linking the ofzza onboarding guides, as the template), branching, the project structure, and a **glossary**. The glossary is seeded now with the terms already in use: unit, showcase, showcased repo, rendering module, base package, theme, theme catalogue, shell (shadow root), test runner, fixture, interface version.
+- **`CONTRIBUTE.md`** (contributors): reporting issues and the contribution workflow (linking the ofzza onboarding guides, as the template), branching, the project structure, and a **glossary**. The glossary is seeded now with the terms already in use (A4: the representation terms of 08b §1.1 / C2 §13 replace "unit"): symbol, exporting file, resource, association, node, directory config, collection, in scope, showcase, showcasing component, showcased repo, rendering module, base package, theme, theme catalogue, shell (shadow root), test runner, fixture, interface version.
 - **`README.md`** (users): a short stub now (what tsshowcase is, "under construction", Development and Contributing sections). C13 writes the real one.
 - **Package READMEs:** the template's structure (§2).
 - **`PUBLISH.md`:** arrives with C14, mirroring the template's checklist (see "Recorded for later chunks").
@@ -243,26 +255,31 @@ The template's three-way split, adapted:
 
 ### 10. Keeping docs, tests and showcases current at scale (D56)
 
-The template relies on a trigger table and discipline. This repo will have dozens of unit READMEs, tests and showcases across 7 packages, so the plan is to **keep the trigger table** and **back it with automation wherever "out of date" can be detected mechanically**.
+The template relies on a trigger table and discipline. This repo will have dozens of area READMEs, tests and showcases across its packages, so the plan is to **keep the trigger table** and **back it with automation wherever "out of date" can be detected mechanically**.
 
 **a) The trigger table, extended.** The template's rows are kept, and these are added:
 
 | A change that …                                         | … requires updating                                                                                                                                          |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| adds a unit                                             | its directory, `index.ts`, `README.md`, test file, showcase where D37 requires one; the package's `src/index.ts` re-export; the package README's export list |
-| changes a unit's signature, props, options or semantics | the unit's README, tests (and their purpose comments) and showcase; every README sample using it                                                             |
-| removes or renames a unit or an export                  | the package entry, the package README's export list, every README linking to it, and its showcase                                                            |
+| adds an exporting file (a public concept)               | its directory's README (or a `<Concept>.md`), a test named after it and a showcase where its kinds require them (D162); the named re-export line in the package's entry file; the package README's export list (A4) |
+| changes a symbol's signature, props, options or semantics | the area README (or `<Concept>.md`), tests (and their purpose comments) and showcase; every README sample using it                                         |
+| removes, renames or moves an exporting file or a symbol | the entry's named re-export line, the package README's export list, the README of the old and of the new directory, every README linking to it, its test and showcase file names, and any directory config listing it (`paths`, `collections`, `kinds`, `exempt`) |
+| adds an area directory                                  | its `README.md`; a `.tsshowcase` if it should be a menu level (A4)                                                                                           |
+| changes a directory config or a collection              | the docs of the nodes it creates or changes; `tsshowcase check` passes (A4)                                                                                   |
+| adds or changes a `kinds` or `exempt` entry             | a JSONC comment next to it stating the reason (they weaken the check; the `check` summary counts exemptions, D191) (A4)                                      |
+| adds a showcasing component (a new export in a `*.showcase.tsx`) | a meaningful name or title for it (its `meta`, D195); the smoke render covers it automatically (A4)                                                     |
+| adds or changes a module's `static kinds`               | the kinds' documentation in that module's README and the C13 docs of what each kind requires (D162) (A4)                                                     |
 | changes an `-api` contract                              | the interface changelog (D13: additive within a major), the authoring docs, and every in-repo implementer (built-in module, theme, runner)                   |
 | changes a theme catalogue class or variable (from C3)   | the catalogue docs, the default themes, and the module/runtime code using it                                                                                 |
 | changes a CLI flag, config key or output format         | the CLI reference in the root README and the config schema docs                                                                                              |
-| adds a package                                          | the layout and packages list in AGENTS.md, the root `tsconfig.build.json`, Vitest projects, the dependency table, CONTRIBUTE.md's structure                  |
+| adds a package                                          | the layout and packages list in AGENTS.md, the root `tsconfig.build.json`, Vitest projects, the dependency table, CONTRIBUTE.md's structure; its own `tsshowcase.config.json` where needed (`skip`, a `scope` override; A4) |
 | changes a fixture                                       | the tests using it and `fixtures/README.md`                                                                                                                  |
 | changes a package's public behaviour at all             | a changeset (`npm run changeset`)                                                                                                                            |
 
 **b) Single source per fact.** Each fact is written once and linked from elsewhere, so there are fewer places to update:
 
 - a package's export list lives in that package's README only (AGENTS.md links to it, and doesn't repeat it as the template does);
-- a unit's documentation lives in its own README only. Package READMEs link to it rather than repeating it.
+- a concept's documentation lives in its area README (or its own `<Concept>.md`) only (D163, A4). Package READMEs link to it rather than repeating it.
 
 **c) Automated checks, added to `npm run ci`:**
 
@@ -270,8 +287,8 @@ The template relies on a trigger table and discipline. This repo will have dozen
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------ |
 | `ci:readme-samples`: `scripts/readme-samples.mjs` extracts every ` ```ts `/` ```tsx ` block from every `README.md`, and type-checks them against the workspace (imports of `@ofzza/tsshowcase-*` resolve to source via the `source` condition). A block can opt out with a `nocheck` fence attribute. | README samples drifting from the API (automates the template's manual rule) | **C1** |
 | `ci:links`: `remark-validate-links` over every Markdown file (offline; relative files and heading anchors).                                                                                                                                                                                           | Links broken by a rename, move or removed heading                           | **C1** |
-| Unit completeness (own dir, README, tests, showcase per kind): `tsshowcase check` on this repo (D41)                                                                                                                                                                                                  | A unit missing its README, tests or showcase                                | C9     |
-| Showcase smoke render: every `*.showcase.tsx` renders without throwing (stdblox's `showcases.test.tsx` pattern)                                                                                                                                                                                       | Showcases broken by an API change                                           | C10    |
+| Representation (every public symbol represented with the docs, tests and showcases its kind requires; framework rules): `tsshowcase check` on this repo (D41, D174, A4)                                                                                                                                                                                                  | A public symbol missing its docs, tests or showcase                         | C9     |
+| Showcase smoke render: every showcasing component of every `*.showcase.tsx` renders without throwing (stdblox's `showcases.test.tsx` pattern; per (file, export), D195, A4)                                                                                                                                                                                       | Showcases broken by an API change                                           | C10    |
 | PR changeset check: `changeset status --since=origin/develop` on pull requests that touch `packages/`; **shipped disabled until the first publish** (A2, D80)                                                                                                                                                                                                 | Forgotten changesets                                                        | **C1** |
 
 What stays manual (and is said so in the trigger table's intro): whether README _prose_ and showcase _content_ still describe the behaviour accurately. Reviews and the purpose-comment rule cover these.
@@ -298,7 +315,7 @@ What stays manual (and is said so in the trigger table's intro): whether README 
 1. `npm ci && npm run ci` passes on a clean checkout on Node 22 and 24: build, root type-check, ESLint, Prettier (whole repo), the 7 wiring tests (runtime + typecheck), README samples, links.
 2. `npm run build` emits `dist/` for all 7 packages in dependency order. `node packages/tsshowcase/dist/bin.js` prints the stub message.
 3. A test in one package that imports another workspace package runs **without** a prior build (via the `source` condition). Checked once by hand during implementation.
-4. A deliberately broken type assertion in a test fails `npm test` (the template's sanity check). Reverted afterwards.
+4. A deliberately broken type assertion in a test fails `npm test` (the template's sanity check), and so does one in a `*.test-d.ts` file (A4). With `TSS_VITEST_DEBUG` unset, `vitest list` shows only `unit:*` projects (A4). Reverted afterwards.
 5. A deliberately broken README sample fails `ci:readme-samples`, and a broken relative link fails `ci:links`. Reverted afterwards.
 6. `npm run fixtures:install` succeeds with zero fixtures. A temporary throwaway fixture confirms it is ignored by ESLint, TS and Vitest, and that Prettier skips only its `node_modules`.
 7. `npx changeset status` works.
@@ -316,7 +333,7 @@ Contracts (C2), theme design and stylelint (C3), all runtime dependencies, React
   - the consumer smoke test type-checks each packed package under **both** `nodenext` and `bundler` resolution, and imports it at runtime (as the template's PUBLISH.md does);
   - a `prepublishOnly` guard so a failing build is never published;
   - `PUBLISH.md` mirroring the template's checklist: clean and synced `develop`, green CI, docs match code, `npm pack --dry-run` contents, unused version, `npm whoami`, fast-forward `master` to `develop`, publish from `master`, prerelease dist-tags, 2FA (`--otp`, generated fresh because `prepublishOnly` runs first), and first-publish registry 404 caching.
-- **C9:** ignore `fixtures/` in this repo's own `tsshowcase check` (config `ignore: ['/fixtures/']`, D107).
+- **C9:** this repo's root `tsshowcase.config.json`: `scope: ['src']` and `strict: ['check', 'warnings']` (A4, §8); `fixtures/` needs no `ignore` (outside every package, A4; replaces D107's `ignore: ['/fixtures/']`).
 - **C10:** the showcase smoke-render test (§10c).
 
 ## Amendment A1: JSON schemas with tsschema sidecars (D58, D62), re-approved
@@ -345,7 +362,19 @@ Raised during C2 planning:
 Raised during C4 planning (`04a-c4-plan-review.md` M2, M4, N15):
 
 - **Package:** a private `packages/tsshowcase-test/` (`@ofzza/tsshowcase-test`, `private: true`, never published) built from the §2 skeleton; it holds `copyFixture()` and `fixturePath()` (specified in C4 §11.1), is a `devDependency` only (no project reference), and skips itself from this repo's dogfood `check` with its own `tsshowcase.config.json` (`{ "skip": true }`, D59). §1, §2 and §6 (changesets `privatePackages`) updated in place.
-- **Fixtures (§5):** their own ignore rules go in `.tsshowcaseignore` files (D109); fixture content this repo's `.gitignore` would catch is re-included with `!` rules; `fixtures/broken-*/` is excluded from Prettier; gotcha 2 annotated (C4 uses no git and no parent `.gitignore`); the C9 self-check uses config `ignore` (D107).
+- **Fixtures (§5):** their own ignore rules go in `.tsshowcaseignore` files (D109); fixture content this repo's `.gitignore` would catch is re-included with `!` rules; `fixtures/broken-*/` is excluded from Prettier; gotcha 2 annotated (C4 uses no git and no parent `.gitignore`); the C9 self-check uses config `ignore` (D107; superseded by A4: `fixtures/` lies outside every package).
+
+## Amendment A4: the representation redesign (D160–D200), approved 2026-10-20
+
+Plan 3 of the redesign's application (`08b-representation-redesign.md` §12, `08e` E7), after C2 amendment B9 (`02b-c2-b9-review.md`, which also lists the C1 checklist); its review and the user's decisions are in `01e-c1-a4-review.md`:
+
+- **§8 Dogfooding:** units (a directory with an `index.ts` barrel, D36) are replaced by the representation rules: one exporting file per concept, one README per area documenting every exporting file in it, tests and showcases named after the file they cover, areas as plain directories (menu levels through `.tsshowcase`), collections for multi-file concepts, `src/index.ts` re-exporting declaring files; no per-concept barrels, no `_`-prefixed internal directories; JSON schemas imported by public code are exporting files; the dogfood config's `scope: ['src']`.
+- **§5, "Recorded for later chunks":** `fixtures/` lies outside every package, so the dogfood check needs no `ignore: ['/fixtures/']`.
+- **§9:** the layout wording and the glossary seed use the representation terms.
+- **§10:** trigger rows for exporting files, area directories, directory configs, `kinds`/`exempt` entries, showcasing components and module kinds; one place per fact (the directory README or `<Concept>.md`); the `check` row (representation) and the smoke render per showcasing component (D195).
+- **§1, §2, §4:** `-lint` noted in the layout (C3, D88); the skeleton comment ("no exported symbols"); an ESLint rule against `export *` in entry files; `typecheck.include` adds `*.test-d.{ts,tsx}`; extra Vitest projects per package (`unit:<pkg>:<part>`); the `debug` project opt-in through `TSS_VITEST_DEBUG=1` and a `debug` script; acceptance criterion 4 extended.
+- **§8 (from the review):** directory READMEs per directory with exporting files; entry files re-export by name, carry `source` conditions, nothing exporting directly in `src/`; kinds by value (D200); local declarations for public API from dependencies; JSON exporting only when re-exported; `.tsshowcase.jsonc` only, no `directories` entries; the root config's `scope` and `strict`; root documents as home docs.
+- Unchanged: the tooling, CI, fixtures convention (apart from the ignore), versioning, and the C1 deliverables themselves (C1 packages still export nothing).
 
 ## Resolved questions
 

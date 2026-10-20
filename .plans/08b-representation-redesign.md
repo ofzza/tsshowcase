@@ -194,7 +194,7 @@ interface ShowcasingComponent {
 ```ts
 interface TestRunner {
   detect(repo: RunnerRepoInput): MaybePromise<boolean>; // unchanged (C2 §6)
-  listTestFiles(repo: RunnerRepoInput): Promise<TestListing>; // new, required
+  listTestFiles(options: TestListOptions): Promise<TestListing>; // new, required; { repo, signal } since the plan-2 review (02b Fix 1d)
   run(options: TestRunOptions): Promise<RawTestReport>; // unchanged; the CLI calls it without a files filter
   watch(options: TestRunOptions, onUpdate: (update: RawTestUpdate) => void): Promise<RawTestReport>; // unchanged
 }
@@ -317,7 +317,7 @@ interface FileInput {
 ```ts
 interface RepresentableNode {
   id: string; // opaque (meaning via path and representation)
-  representation: 'direct' | 'indirect' | 'root' | 'home'; // open union
+  representation: 'direct' | 'collection' | 'indirect' | 'root' | 'home'; // open union; 'collection' since the plan-2 review (02b Q5)
   path: RepoPath; // the file (direct), the virtual '<dir>/<key>' (collection), or the directory (indirect, root, home)
   configuredBy?: RepoPath; // root: the directory whose config merged into it (Z7)
   name?: string; // from configuration; modules derive a default ('index.*' → its directory's name)
@@ -362,9 +362,9 @@ interface DocRef { path: RepoPath; id: string; format: 'markdown' | 'text'; role
 | config issues (`config/*`) | the config directory's own node, else the nearest node above; root-config issues are repo-level |
 | `verify` issues, and module analysis issues with an in-scope `file` | the file's own nodes, else the nearest node above (`FileInput.nodes`) |
 | other module analysis issues with a `package` | that package's root |
-| repo-level issues (incl. `tests/*`) | `Representation.issues` and the repo home's `issues` |
+| repo-level issues (incl. `tests/*`) | `Representation.issues` only (changed in the plan-2 review, `02b-c2-b9-review.md` Fix 4: each issue lives in exactly one place; homes carry only issues about their own docs) |
 
-- "The nearest node above" is a root or indirect node; homes never take issues or resources that way (they only hold home docs and, for the repo home, repo-level issues).
+- "The nearest node above" is a root or indirect node; homes never take issues or resources that way (they hold home docs and the issues about them only).
 - `Issue` loses `dir` (no directory verdicts); the CLI derives `package` from `file` when unset. All issues are printed in the report; whether a module shows them is its choice.
 
 ### 7.4 Weak associations
@@ -490,8 +490,9 @@ interface RenderedDoc {
 }
 ```
 
-- The data stays plain JSON (C2 principle 2). Docs are `DocRef`s. `BuildContext` and `DevContext` gain `representation` (replacing `data: ShowcaseData`) and `docs: DocsAccess`; `DevContext` gains `onDocsUpdate(listener: (update: { revision: number; docs: DocRef[] }) => void)` for re-rendered docs; `onDataUpdate` delivers `Representation` and `onTestUpdate` delivers `TestsUpdate`. Other members as in C2 §5.8.
-- **The interface is fixed here and in C2 (E2).** The mechanics (how rendered HTML is embedded in the bundle, how the dev docs update travels with the shared revision, render tracking for asset copying) are designed in the C15 revision. Binding constraint: **only rendered docs and their assets reach the output**; a doc's assets are written iff `render` was called for it in this build; in `dev`, only rendered docs are re-rendered on change.
+- The data stays plain JSON (C2 principle 2). Docs are `DocRef`s. `BuildContext` and `DevContext` gain `representation` (replacing `data: ShowcaseData`) and `docs: DocsAccess`; ~~`DevContext` gains `onDocsUpdate(…)` for re-rendered docs~~ (dropped in the plan-2 review, `02b-c2-b9-review.md` H2: content-only doc edits produce a full snapshot through `onDataUpdate`); `onDataUpdate` delivers `Representation` and `onTestUpdate` delivers `TestsUpdate`. Other members as in C2 §5.8.
+- **Plan-2 review (`02b-c2-b9-review.md`):** `DataUpdate` carries `{ representation, docs, state }` (Q1); in `dev` the CLI pre-copies the assets of every `DocRef` (Q2); `init` sees reason `'init'` (Q3); a collection's node is `representation: 'collection'` (Q5).
+- **The interface is fixed here and in C2 (E2).** The mechanics (how rendered HTML is embedded in the bundle, render tracking for asset copying) are designed in the C15 revision. Binding constraint: **only rendered docs and their assets reach the output**; a doc's assets are written iff `render` was called for it in this build; in `dev`, only rendered docs are re-rendered on change.
 - `check` still validates the links and anchors of **every** `DocRef`, home docs included (D123); that needs parsing, not rendering.
 
 ### 7.11 `ScaffoldContext`
@@ -704,7 +705,7 @@ To be worked through after this revision is approved, **plan by plan in this ord
   - §5.4: `AnalyzeContext`/`AnalysisResult`, attachment rules, the new validation (replacing D70's), `AnalyzedUnit`, `unitRoot`, `ExportedSymbol.entry/typeOnly` removed;
   - §5.5: per-file `verify`, `VerifyContext`; §5.6: `resolveRoute` with `RouteTarget`, the links subsection;
   - §5.7: replaced by a note (tests are the CLI's; `TestContext`, `loadTestRunner` removed);
-  - §5.8: `BuildContext`/`DevContext` with `representation`, `docs`, `onDataUpdate`, `onTestUpdate`, `onDocsUpdate`, the assets rule;
+  - §5.8: `BuildContext`/`DevContext` with `representation`, `docs`, `onDataUpdate` (with `DataUpdate`), `onTestUpdate`, the assets rule;
   - §5.9: the call order from the pipeline (§3); §5.10: `ScaffoldContext` (§7.11); §5.11: the `testRunner` paragraph removed;
   - §6: `listTestFiles`, `TestListing`, process restore around listing, "the module maps" removed;
   - §8: rules 6 (prefixed ids), 7 (`shell` via `meta`), the embedding of `Representation`; inclusion rules unchanged in substance;
@@ -722,7 +723,7 @@ To be worked through after this revision is approved, **plan by plan in this ord
 - **C5 (redesign amendment):** link rules (§7.7, the E3 order); doc ids (E4) and prefixing; fragments; the permalink owner (link-selection node); `<a>` without `href` for broken and info-less VCS links; the callback `(target) => string | undefined`; the API (`LinkTargets` → the representation, lazy per-doc render returning `RenderedDoc`, `checkDocs` over every `DocRef`, assets per render); the hierarchy helper (§8.2) deleted; recorded points.
 - **C6 (redesign amendment):** `ResolvedConfig` (`strict`, `rules` patterns, `--rule`, `--out`, runner loading, normalised directory configs); the argv normaliser (`--strict`, `--no-strict`) and `--rule` parsing; `--no-tests`; the schemas (root, package, `directory-config.schema.json`, `defineDirectoryConfig`, `collections` rejected at the top level); the precedence of §8.2; per-package merging; module `testRunners` resolution; runner loading rewritten (candidates, pinning, all detecting); the rule-id table (§5.3) for `rules` validation; "did you mean" for removed keys and the old positional.
 - **C7 (redesign amendment):** `listTestFiles` returning `TestListing` (via `globTestSpecifications()`); several detected runners are no longer an error; restore around listing; the Vitest 3/4 inline-root caveat documented; the "independent of cwd" test scoped; README: `testRunner` is a CLI key; recorded points move to C9/C11.
-- **C15 (redesign amendment):** `prepareData(Representation)`; showcase loaders keyed by file, `loadShowcase(file, exportName)`; `applyTestUpdate` over `Representation.tests` with `TestsUpdate`; one revision; the lazy-docs mechanics (E2: embedding rendered HTML, the dev docs update, render tracking for assets).
+- **C15 (redesign amendment):** `prepareData(Representation)`; showcase loaders keyed by file, `loadShowcase(file, exportName)`; `applyTestUpdate` over `Representation.tests` with `TestsUpdate`; one revision; the lazy-docs mechanics (E2: embedding rendered HTML, render tracking for assets; no separate dev docs update, 02b H2).
 - **Super-plan (R10):** the revision note; package table rows; chunk texts (C1, C2, C4–C15); the C2 CLI-duties table rewritten (scan, enrichments, associations, representation, check, issue placement, runners, `--strict`, lazy docs, asset copying); edges C9 → C7 added, C10 → C7 dropped (C11 keeps C7, Z12); implementation order C1 → C2 → C4 → C6 → C7 → C8 → C9, then C3 → C5 → C15 → C10 → C11 → …
 - **C8 (React base, rewritten):** `AnalysisResult` (symbols with kinds incl. the TS rules and the syntactic fallback, showcasing components with `meta`), per-file `verify` (`headless`, showcase format), `react/showcase-in-build` as an analysis issue, `scaffold` (§10), options (`homeDocs` is `react-default`'s; no `testRunner`); fixtures re-derived. From 08a: **carried** U7 (namespace re-exports, `export =`), U8/U18 (`init` with no entry; `init` targets, re-expressed without claims), U9–U13 (entries, dist → source, externals, ignored sources, TS API precision), U15 (slug validation only), U17 (`inputs`, re-verify), U19–U22; **obsolete** U1–U6, U14, U16, U18's claim parts, and U23 except: `directory-config.schema.json` in C6's published files and C14's smoke test, the editor `json.schemas` tip, C13 "directory configs execute code (JS/TS)", C12 end-to-end coverage (re-expressed: directory configs, collections, `paths`, `slug`, `order`, exemptions).
 - **C9:** associations, the representation builder, the CLI check, the report over in-scope directories, issue placement (§7.3), `--rule`, `check --strict=warnings`.

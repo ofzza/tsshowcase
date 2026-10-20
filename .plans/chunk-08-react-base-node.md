@@ -1,5 +1,7 @@
 # Chunk plan C8: React base, Node side (`@ofzza/tsshowcase-base-react`, `@ofzza/tsshowcase-module-react-default`)
 
+> **HISTORICAL: superseded by `08b-representation-redesign.md`; this plan will be rewritten on the representation model.** Its proposed amendments B9 (C2) and R10 (super-plan) are void; the redesign uses those ids for its own amendments (08e E7).
+
 > Status: **DRAFT** (round 2, 2026-10-19). Round 1's questions Q1–Q8 are resolved (D149–D159); they reshaped the unit rules (declaring directory + claims), added CLI-owned directory configs (`.tsshowcase.*`), per-node `showcase`/`name`/`slug`/`order`, broadened groups and declaration-keyed kind overrides. These need amendments to C2 (B9), C4, C6, C9, C10, C11 and super-plan R10, listed at the end. Decisions referenced as `D<n>` are in AGENTS.md §3.
 
 ## Goal

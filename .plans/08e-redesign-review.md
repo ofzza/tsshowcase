@@ -1,6 +1,6 @@
 # Redesign revision 3 review triage (`08b-representation-redesign.md`)
 
-> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F to be applied in 08b revision 3.1 (not yet written).
+> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F and the E outcomes **applied in 08b revision 3.1** (2026-10-20), awaiting the user's review.
 
 ## Verdicts
 
@@ -46,4 +46,4 @@
 - **E6 (2026-10-20):** once applied, 08b becomes history (banner: "applied; the plans and D160+ are authoritative; kept as design rationale"); AGENTS "Current focus" is removed when the application is complete.
 - **E7 (2026-10-20):** ids: C2 **B9** (the C8 draft's B9 is void), C1 **A4**, C3 **C3-A3**, a "redesign amendment" section in C4, C5, C6, C7, C15, super-plan **R10** (the draft's R10 is void), decisions **D160+** (one per RQ plus the substantive outcomes; draft in 08f). Approval **plan by plan**, each presented, approved and committed: AGENTS (decisions) → C2 → C1, C3–C7, C15 → super-plan R10 → C8.
 
-**Next:** write 08b revision 3.1 applying E1–E7 and group F (F1–F9) above; the user reviews and approves 08b; then apply it per E7.
+**Next:** ~~write 08b revision 3.1~~ (done, 2026-10-20); the user reviews and approves 08b; then apply it per E7.

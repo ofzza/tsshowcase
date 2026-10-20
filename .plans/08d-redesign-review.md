@@ -1,5 +1,7 @@
 # Redesign revision 2 review triage (`08b-representation-redesign.md`)
 
+> **HISTORICAL: superseded by `08b-representation-redesign.md`.** Its outcomes are folded into 08b, which wins wherever they differ. Recommendation columns are not decisions; only the recorded outcomes are.
+
 > Four focused clean-context reviews of 08b revision 2 (2026-10-20), run in parallel: **A** = consistency and verdict audit (24 findings), **I** = stage interfaces against principle 1 (24 findings), **W** = walkthroughs over stdblox-react (on disk) and this repo's planned layout (19 findings), **S** = feasibility spikes (Vitest 3.2/4/5 listing, TypeScript 6 API, picomatch, `parseArgs`). Merged below as Z1–Z18 (decisions) and V1–V12 (clarifications and fixes). Status: **resolved** (2026-10-20): group Z decided one by one, group V and the remaining group Y items approved; all folded into 08b revision 3.
 
 ## Verdicts

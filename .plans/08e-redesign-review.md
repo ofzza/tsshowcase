@@ -1,6 +1,6 @@
 # Redesign revision 3 review triage (`08b-representation-redesign.md`)
 
-> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F and the E outcomes **applied in 08b revision 3.1** (2026-10-20); the choices 3.1 made beyond them reviewed as group G (end); 08b awaiting the user's approval.
+> Three clean-context reviews of 08b revision 3 (2026-10-20), focused on **clarity and self-sufficiency** (the redesign will be applied from a fresh context): **R** = cold-start applier (a dress rehearsal starting from CLAUDE.md/AGENTS.md; its checklist is saved as `08f-application-checklist.md`), **P** = definition precision (35 implementer's questions, ~35 derivable test cases), **H** = document authority and consistency (22 findings). Status: **group E decided** (outcomes at the end); group F and the E outcomes **applied in 08b revision 3.1** (2026-10-20); the choices 3.1 made beyond them reviewed as group G (end); 08b approved by the user (2026-10-20).
 
 ## Verdicts
 
@@ -57,4 +57,4 @@
 - **G7 (ok):** principle 3 stays "drawn from the outcomes of Z1, Z3 and X7"; the "to be confirmed" note is removed.
 - **G8 (ok):** the vouching example is `paths: ["**"]`; verified with picomatch 2.3.1 (`dot: true`): `*/**` skips the directory's own files, `**` matches everything at or below it.
 
-**Next:** ~~write 08b revision 3.1~~ (done, 2026-10-20, with G1–G8 applied); the user reviews and approves 08b; then apply it per E7.
+**Next:** ~~write 08b revision 3.1~~ (done, 2026-10-20, with G1–G8 applied); ~~the user reviews and approves 08b~~ (approved 2026-10-20); then apply it per E7.

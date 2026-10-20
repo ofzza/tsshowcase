@@ -269,6 +269,8 @@ Schema violations of configs and directory configs stay thrown `ConfigError`s (C
 | `config/slug` | warning | duplicate sibling slugs |
 | `docs/broken-link`, `docs/broken-anchor` | warning | §7.7 (D123) |
 | `module/error` | error | invalid module output that isn't fatal (e.g. an undeclared kind, §4.1) |
+| `scan/invalid-manifest` | error | a package manifest that can't be parsed (C4; added in the plan-1 review, 2026-10-20) |
+| `scan/no-manifest`, `scan/unreadable` | warning | no root manifest; an unreadable directory (C4; added in the plan-1 review; C4's `scan/scope-unmatched` becomes a printed warning, G5) |
 | module-declared (`react/*`, `headless/*`, …) | the module's | the module's analysis or `verify` |
 
 Where each issue attaches: §7.3.

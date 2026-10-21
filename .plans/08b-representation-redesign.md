@@ -107,7 +107,7 @@ type FileRole = 'exporting' | 'doc' | 'test' | 'showcase' | 'config'; // open un
 ```
 
 - **Roles:** `doc` = a `.md` file, or a `README`/`LICEN[CS]E`/`CHANGELOG` in a non-markdown form where §4.3 and §7.8 accept one; `config` = a directory config file; `test` = listed by a runner (§4.2); `exporting` = at least one symbol (§4.1); `showcase` = at least one showcasing component. A file may have several roles; `test` and `showcase` are exclusive (a file that is both counts as a test, §4.3).
-- **Roles depend on the stage (G6; documented on `AnalyzeContext.tree` and `ScannedFile.roles`):** the tree in `AnalyzeContext` carries only the CLI's scan-time roles, `doc` and `config`. `exporting` and `showcase` are what `analyze` itself produces, and `test` is left out so that the CLI can list test files **in parallel** with the analysis; a module that needs to know about tests matches file names itself. Every later context (verify, scaffold, build, dev) gets a tree with every role.
+- **Roles depend on the stage (G6; documented on `AnalyzeContext.tree` and `ScannedFile.roles`):** the tree in `AnalyzeContext` carries only the CLI's scan-time roles, `doc` and `config`. `exporting` and `showcase` are what `analyze` itself produces, and `test` is left out so that the CLI can list test files **independently of** the analysis (one after the other, never in parallel, since runners change process state: `07b-c7-redesign-review.md` QC); a module that needs to know about tests matches file names itself. Every later context (verify, scaffold, build, dev) gets a tree with every role.
 
 ### 3.2 `scope`, package-relative
 
@@ -122,7 +122,7 @@ type FileRole = 'exporting' | 'doc' | 'test' | 'showcase' | 'config'; // open un
 ```ts
 interface AnalyzeContext {
   repo: RepoInput;
-  tree: ScannedTree; // roles: only 'doc' and 'config' (exporting/showcase come from this analysis; tests are listed in parallel), §3.1
+  tree: ScannedTree; // roles: only 'doc' and 'config' (exporting/showcase come from this analysis; tests are listed independently, 07b QC), §3.1
   signal: AbortSignal; // dev aborts a stale analysis
 }
 

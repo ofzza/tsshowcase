@@ -22,7 +22,7 @@ The redesign separates the concerns:
 
 - **Symbol:** a publicly exported declaration, identified by its declaring file and declared name (`file#name`, split on the last `#`).
 - **Exporting file:** a file that declares at least one symbol. A **collection** (§8.4) stands in for one exporting file.
-- **Base:** a file's name minus its last extension (`Button.tsx` → `Button`, `Button.types.ts` → `Button.types`); `.d.ts`, `.d.mts` and `.d.cts` count as one extension (`index.d.ts` → `index`). A collection's key is its base, used as is.
+- **Base:** a file's name minus its last extension (`Button.tsx` → `Button`, `Button.types.ts` → `Button.types`); `.d.ts`, `.d.mts` and `.d.cts` count as one extension (`index.d.ts` → `index`). A collection's key is its base, used as is. Extensions are compared in any case (D201, plan 5).
 - **Resource:** a doc, test or showcase file. A **showcasing component** is an export of a showcase file that the module recognises as a showcase.
 - **Association:** a link from a resource to a node (through an exporting file's or collection's direct node, or directly), at one of three levels: **primary > strong > weak** (§4.3).
 - **Leftover:** a resource directly in a directory that has neither a by-name nor an explicit association. Home docs are never leftovers.
@@ -33,7 +33,7 @@ The redesign separates the concerns:
 - **Upward listing:** a `paths` entry that lists a file not below the node's directory. Only those entries are ignored when choosing link targets; they still count for the check (X6).
 - **Directory config:** a `.tsshowcase*` file, or an entry of a config file's `directories` map (§8.2); type `DirectoryConfig` (§8.1).
 - **Source** (for the check): an exporting file with its associations, or a node listing a symbol (§5.1).
-- **In scope:** a directory or file at or below a match of its package's `scope` (§3.2), below the package directory and not below a nested package, and not ignored (D103, D109) or skipped. Directories outside every package are never in scope.
+- **In scope:** a directory or file at or below a match of its package's `scope` (§3.2; entries match directories, a file is in scope when its directory is: plan 5, `04b` J3), at or below the package directory and not below a nested package, and not ignored (D103, D109) or skipped. Directories outside every package are never in scope.
 - **Literal:** a pattern with no unescaped glob characters.
 - **Walk order:** a directory's files before its subdirectories, names sorted in UTF-16 code units, recursively (§3.1); identical on every machine.
 - **Tree order:** depth-first over the node tree, children in their final order (§7.5); homes come before the tree.
@@ -111,7 +111,7 @@ type FileRole = 'exporting' | 'doc' | 'test' | 'showcase' | 'config'; // open un
 
 ### 3.2 `scope`, package-relative
 
-- `scope` lists paths and globs **relative to each package** (in a single-package repo, the repo root). Default `['.']`. A match includes everything below it.
+- `scope` lists paths and globs **relative to each package** (in a single-package repo, the repo root). Default `['.']`. A match includes everything below it. Entries match directories; a file is in scope when its directory is (plan 5, `04b` J3).
 - Set in the root config as the default for every package, overridable in a package config. `--scope` applies to every package; one "unmatched" warning per entry, printed only when the entry matches in no package; an unmatched config `scope` entry gets the same warning. A printed warning, not a check issue (G5: it concerns the run's arguments or settings, not the repository's structure).
 - The workspace root is never a package (C2 §4.3); a repo with no manifest has no packages and nothing in scope. Running on one package: `skip`/`ignore` (documented). `scope: ['src']` is recommended for typical layouts (documented).
 
@@ -211,7 +211,7 @@ interface TestListing {
 
 | Rule | Level |
 | ---- | ----- |
-| **By name:** a resource named `<base>.` + anything belongs to the exporting file (or collection) with base `<base>` in the same directory; the **longest matching base wins**; two exporting files with the same base and different extensions are a `config/same-base` error (their resources stay unassociated); exact case (D130). Name-matched docs are `<base>.md` only. | **primary** |
+| **By name:** a resource named `<base>.` + anything belongs to the exporting file (or collection) with base `<base>` in the same directory; the **longest matching base wins**; two exporting files with the same base and different extensions are a `config/same-base` error (their resources stay unassociated); the base in exact case (D130), the extension in any case (D201). Name-matched docs are `<base>.md` only (`.md` in any case). | **primary** |
 | **Explicit:** listed by a configured node's `paths` or a collection's resource members (§8) | **primary** |
 | **Directory README** (`README`, `README.md`, `README.txt`, case-insensitive; among several, markdown first, then name order; non-markdown renders as text; Z16, confirmed by the user): **primary** for the directory's configured node (incl. the root when its `configuredBy` lies **below** the package directory, E1) | **primary** |
 | … and **strong** for every exporting file in that directory, whether or not a configured node exists | **strong** |
@@ -307,7 +307,7 @@ interface FileInput {
 }
 ```
 
-- Called for **every in-scope file**. No `ignored` verdict. The CLI forces each returned issue's `file` to the input file.
+- Called for **every in-scope file**. No `ignored` verdict. The CLI forces each returned issue's `path` (renamed from `file`, D202) to the input file.
 - **Invalidation in `dev`:** content edits re-verify the files whose tracked reads changed; changes to enrichments, associations, configs or the representation re-verify every file.
 
 ## 7. The representation
@@ -360,12 +360,12 @@ interface DocRef { path: RepoPath; id: string; format: 'markdown' | 'text'; role
 | symbol issues (`represent/*`) | every source considered: the symbol's direct node and each configured node listing it |
 | doc issues (`docs/*`) | every node holding the linking doc's `DocRef` |
 | config issues (`config/*`) | the config directory's own node, else the nearest node above; root-config issues are repo-level |
-| `verify` issues, and module analysis issues with an in-scope `file` | the file's own nodes, else the nearest node above (`FileInput.nodes`) |
+| `verify` issues, and module analysis issues with an in-scope `path` | the path's own nodes (a file's own nodes, `FileInput.nodes`; a directory's own node), else the nearest node above |
 | other module analysis issues with a `package` | that package's root |
 | repo-level issues (incl. `tests/*`) | `Representation.issues` only (changed in the plan-2 review, `02b-c2-b9-review.md` Fix 4: each issue lives in exactly one place; homes carry only issues about their own docs) |
 
 - "The nearest node above" is a root or indirect node; homes never take issues or resources that way (they hold home docs and the issues about them only).
-- `Issue` loses `dir` (no directory verdicts); the CLI derives `package` from `file` when unset. All issues are printed in the report; whether a module shows them is its choice.
+- `Issue` loses `dir` (no directory verdicts) and `file` becomes `path` (D202, plan 5); the CLI derives `package` from `path` when unset. All issues are printed in the report; whether a module shows them is its choice.
 
 ### 7.4 Weak associations
 
@@ -418,7 +418,7 @@ Static rules, independent of routes (D124 holds):
 ### 7.8 Homes (X7, Z3)
 
 - The repo `home` and each package's `home` hold the root's documents: **every markdown file** directly in that root, plus `README`, `LICEN[CS]E` and `CHANGELOG` with no extension (and `README`/`LICEN[CS]E` as `.txt`), case-insensitive, non-markdown rendered as text (D71); `DocRef`s with a `role` (§7.1).
-- **The module selects** what to show (`react-default`: README and licence by default; a `homeDocs` option taking patterns or roles for more).
+- **The module selects** what to show (`react-default`: README and licence by default; a `homeDocs` option taking patterns or roles for more). Default order (plan 5, `04b` J6, D178): by role `readme`, `licence`, `changelog`, `other`; within a role markdown first, then name order.
 - **Single-package repos:** the package's home is the repo home (same id `home:.`); `layout` says which case applies; the module decides whether to merge a package's home with its root.
 
 ### 7.9 Tests in the data (X9, Z5, Z6)
@@ -736,7 +736,7 @@ To be worked through after this revision is approved, **plan by plan in this ord
 - Module-proposed collections (e.g. the `headless` preset) and glob keys in `directories` (Z10).
 - Warnings for incomplete configured nodes.
 - The import path (entry/subpath) of an item on its page; exported alias names.
-- Finer ordering rules (children defaults, home docs).
+- Finer ordering rules (children defaults; home docs settled in plan 5, `04b` J6).
 - A module hint for preferred test runners; priority between pinned/module runners and defaults.
 - Grouping issues per file in the report.
 - A `vouch: false` key (Z11).

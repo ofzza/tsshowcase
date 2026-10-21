@@ -1,6 +1,6 @@
 # Chunk plan C5: Markdown pipeline (CLI core)
 
-> Status: **APPROVED** (round 3, 2026-10-19). Q1–Q6 answered (D118–D123); the fresh-eyes review `05a-c5-plan-review.md` triaged and applied (D124–D131). Approved together with C2 amendment B6, C3 amendment C3-A1, the C6 amendment, the C4 note and super-plan R7, all applied. B6's §7 item needed no C2 edit (the stale own-classes text was only in C3 §2.1, fixed by C3-A1). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 3, 2026-10-19). Q1–Q6 answered (D118–D123); the fresh-eyes review `05a-c5-plan-review.md` triaged and applied (D124–D131). Approved together with C2 amendment B6, C3 amendment C3-A1, the C6 amendment, the C4 note and super-plan R7, all applied. B6's §7 item needed no C2 edit (the stale own-classes text was only in C3 §2.1, fixed by C3-A1). Decisions referenced as `D<n>` are in AGENTS.md §3. **Wording from plan 5 (D201, D202, `04b-c4-redesign-review.md`):** the issue's `file` is `path` (D202; §6's stale "`dir` is the doc's directory" is left for plan 6); §4.1's exact-case example differs in the base only, and §4.1 and the asset safety check say that a written path resolves in exact case, extension included (D201 governs classification).
 
 ## Goal
 
@@ -126,7 +126,7 @@ A README path that doesn't exist (a unit whose module expects a `README.md` that
 
 Units dropped for being outside `scope` (D106) are not in the filtered analysis, so links to them fall through to "repo file" (they exist, just not showcased; M6).
 
-**Exact case (D130):** matching is case-sensitive, as on GitHub, on every filesystem. Existence uses `RepoFiles.exists` (D108: ignored = nonexistent), and on case-insensitive filesystems (macOS, Windows) the exact spelling of each segment is confirmed with a `list` of its parent; both are tracked reads in `dev`. So `./Readme.MD` is missing everywhere when the file is `README.md`, and the same repo gives the same links, assets and issues on every machine.
+**Exact case (D130):** matching is case-sensitive, as on GitHub, on every filesystem. Existence uses `RepoFiles.exists` (D108: ignored = nonexistent), and on case-insensitive filesystems (macOS, Windows) the exact spelling of each segment is confirmed with a `list` of its parent; both are tracked reads in `dev`. So `./Readme.md` is missing everywhere when the file is `README.md` (a written path resolves in exact case, extension included; D201 governs classifying the resolved file, not resolving a written path), and the same repo gives the same links, assets and issues on every machine.
 
 ### 4.2 Anchors
 
@@ -173,7 +173,7 @@ export interface DocAsset {
 **The rewrite, step by step** (in the links pass):
 
 1. Classify the URL like a link: external (`http:`/`https:`) → untouched (`data:` was already removed by the sanitiser, §2.2); a repo path → resolved against the doc's directory, percent-decoded, query and fragment dropped.
-2. **Safety (D129).** The path must name an existing, non-ignored **file** with its exact case (D108, D130), and:
+2. **Safety (D129).** The path must name an existing, non-ignored **file** with its exact case, extension included (D108, D130; D201 doesn't apply to resolving written paths), and:
    - its **real path** (every symlink resolved, in the file itself and in every parent directory) must lie inside the **real path of the repo root**; a symlink anywhere along the way that leads outside the repo disqualifies it;
    - the real path must itself be non-ignored, so an in-repo symlink can't expose a gitignored file (`docs/x.png -> ../.env`).
 
@@ -312,7 +312,7 @@ export function checkDocs(options: CheckDocsOptions): Promise<readonly Issue[]>;
 | `docs/broken-link` | warning | a link or media URL points at an ignored or nonexistent path, a wrongly cased one, a path outside the repo, or media failing the safety checks (§4.1, §4.5, §4.6) |
 | `docs/broken-anchor` | warning | a fragment names no id in the target doc (§4.2) |
 
-- `file` is the doc, `line` the link's line (best-effort inside raw HTML, whose positions come from parse5), `message` names the URL as written, `hint` says what was looked for (e.g. "no heading `#instalation` in `README.md`; did you mean `#installation`?" when a near match exists). `dir` is the doc's directory when it is scanned; otherwise unset, so the issue shows at package or repo level (like N17).
+- `path` (D202, was `file`) is the doc, `line` the link's line (best-effort inside raw HTML, whose positions come from parse5), `message` names the URL as written, `hint` says what was looked for (e.g. "no heading `#instalation` in `README.md`; did you mean `#installation`?" when a near match exists). `dir` is the doc's directory when it is scanned; otherwise unset, so the issue shows at package or repo level (like N17).
 - Which docs: the root README, every package README (hidden packages too, D72: their READMEs exist on the host), every unit README of the filtered analysis (D106), every group README (D78) and every markdown licence (§7).
 - `docs/*` joins `scan/*` and `module/error` as CLI-known rule ids, so `rules` can override them (C6 amendment).
 - **`build` and `dev` don't report them a second time:** they run `check` first (D76). In `dev`, C11 re-runs `checkDocs` when it re-renders.

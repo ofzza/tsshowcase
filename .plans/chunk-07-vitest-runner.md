@@ -1,6 +1,6 @@
 # Chunk plan C7: Vitest test runner (`@ofzza/tsshowcase-testrunner-vitest`)
 
-> Status: **APPROVED** (round 3, 2026-10-19), together with C2 amendment B7, the C4 and C6 amendments and super-plan R8, all applied. Open questions Q1–Q6 resolved (D132–D137). Fresh-eyes review (`07a-c7-plan-review.md`, 31 findings, checked against the Vitest 3.2.7, 4.1.12 and 5.0.5 sources) and two spikes (nested Vitest, nested npm installs) applied. Amendments to C2 (B7), C4, C6 and C8, and super-plan R8, are listed at the end (applied). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (round 3, 2026-10-19), together with C2 amendment B7, the C4 and C6 amendments and super-plan R8, all applied. Open questions Q1–Q6 resolved (D132–D137). Fresh-eyes review (`07a-c7-plan-review.md`, 31 findings, checked against the Vitest 3.2.7, 4.1.12 and 5.0.5 sources) and two spikes (nested Vitest, nested npm installs) applied. Amendments to C2 (B7), C4, C6 and C8, and super-plan R8, are listed at the end (applied). Decisions referenced as `D<n>` are in AGENTS.md §3. **Wording from plan 5 (D201, `04b-c4-redesign-review.md`):** §3.1 config and workspace names match in exact case, as Vitest looks them up (an exception to D201).
 
 ## Goal
 
@@ -44,7 +44,7 @@ The runner, not the module, decides where and how many times Vitest runs, becaus
 
 Vitest's own discovery differs by major: 3.x and 4.x walk **up** from the root (past the repo root, even past `/`), 5.x looks only in the root. The runner therefore looks configs up **itself**, through `repo.files.list(dir)` (ignored = nonexistent, D108), **in the instance directory only**, and always passes `config: <absolute path>` or `config: false` to Vitest. Every major then behaves the same, and a gitignored config is never loaded.
 
-- Config names, in Vitest's order: `vitest.config.*`, then `vite.config.*`, each with `ts`, `mts`, `cts`, `js`, `mjs`, `cjs`.
+- Config names, in Vitest's order: `vitest.config.*`, then `vite.config.*`, each with `ts`, `mts`, `cts`, `js`, `mjs`, `cjs`, in exact case as Vitest looks them up (a tool's own names are an exception to D201), so the runner never runs a config Vitest wouldn't choose.
 - **Vitest 3.x only:** `vitest.workspace.*` and `vitest.projects.*` (`ts`, `mts`, `cts`, `js`, `mjs`, `cjs`, `json`, `jsonc`) count as root configs and are passed through Vitest's `workspace` option. On 4.x and 5.x, which dropped workspace files, such a file is ignored with a warning "`vitest.workspace.ts` is ignored by Vitest ≥ 4; move it to `test.projects`". The major is known before the plan is final (§4).
 
 ### 3.2 The rules

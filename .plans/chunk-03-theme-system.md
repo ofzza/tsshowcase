@@ -446,7 +446,7 @@ Plan 4 of the redesign's application (`08b-representation-redesign.md` §12, `08
 ### Recorded for later chunks (C3-A3)
 
 - **C5 (plan 6):** renders `data-link="broken"` / `data-link="unlinked"` on the `<a>` without `href` (`tssData.link`); prefixes every element id with the doc id.
-- **C6 (plan 7):** constrain module kind keys (e.g. `^[a-z][a-z0-9-]*$`) so they are safe as `data-kind` values.
+- **C6 (plan 7):** constrain module kind keys (e.g. `^[a-z][a-z0-9-]*$`) so they are safe as `data-kind` values (resolved by C6 §9.1, CC5; plan 7 approved 2026-10-21).
 - **C10:** styles nothing itself, but uses `tss-issues`/`tss-issue` for node and repo issues, sets `data-link` on its own `tss-link`s that can't link (e.g. an issue's path location or a node routed to the VCS host while no VCS info is known, Fix 4), `data-doc-role` on home docs, its own presentation of association levels (weak tests collapsed by default, D181), `data-status` for its own per-node summaries (D182); further classes it needs (coverage, node lists, package cards, symbol name/file parts, buttons and disclosure toggles carrying `aria-expanded` (Q3), table of contents, …) stay its additive C3 amendment (01d L9), framed as generic additions reviewed against "any module"; layout-only names stay module arrangement classes.
 - **C12:** the computed-contrast smoke test covers the severity colours on their surfaces and `--tss-link-broken` (Fix 5).
 

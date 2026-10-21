@@ -412,7 +412,7 @@ Static rules, independent of routes (D124 holds):
 - **`resolveRoute` returning `undefined`** → the VCS host. A module may answer for a node it doesn't present with another node's URL (e.g. a covering node).
 - **VCS host links** use `VcsInfo.fileUrlTemplate` (D110), fragments passed through unchanged. With no VCS info, such a link renders as an `<a>` without `href` and raises no issue (the one-time `build` warning covers it, D110).
 - **Broken links** (nonexistent, ignored, not represented): rendered as an `<a>` **without `href`**, with a catalogue state attribute for themes, plus `docs/broken-link` (revises D121).
-- **Fragments:** element ids of every doc (headings, footnotes, author anchors) are prefixed with the doc's id (§7.1); a fragment on a doc target is rewritten to the prefixed id and passed as `anchor`; on other in-app targets it is dropped. A fragment that doesn't exist in the target doc gives `docs/broken-anchor`. Authors write GitHub-style `#props` (D127, D128 parity).
+- **Fragments:** element ids of every doc (headings, footnotes, author anchors) are prefixed with the doc's id (§7.1); a fragment on a doc target is rewritten to the prefixed id and passed as `anchor`; on other in-app targets it is dropped. A fragment that doesn't exist in the target doc gives `docs/broken-anchor`. Authors write GitHub-style `#props` (D127, D128 parity). *(Plan 6: on other in-app targets the fragment now reaches the module as `RouteTarget.fragment`, D204; VCS links use `vcs.ref`, default the checked-out commit, D205.)*
 - **Permalinks:** a doc's own headings link to the page of its **link-selection node** (the node a link to the doc file would select).
 
 ### 7.8 Homes (X7, Z3)

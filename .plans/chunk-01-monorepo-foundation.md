@@ -1,6 +1,6 @@
 # Chunk plan C1: Monorepo foundation
 
-> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Amendment A3 (from C4 planning: the private `-test` package, fixture ignore rules; D104, D109, D107) re-approved 2026-10-18 with the C4 plan; see the end of this file. Note: C3 later adds an eighth package, `-lint` (D88), and C4 a private ninth, `-test` (D104); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3. **Amendment A4 (the representation redesign, `08b-representation-redesign.md`, D160–D200) **approved 2026-10-20** (review `01e-c1-a4-review.md`):** §5 and "Recorded for later chunks": no `ignore: ['/fixtures/']`; §8 the dogfood layout under the representation rules; §9 the layout/glossary wording; §10 trigger rows, single source per fact, the automated checks; §1/§2/§4 `-lint`, the skeleton comment, the entry-file ESLint rule, type tests, extra and opt-in Vitest projects; see "Amendment A4" at the end.
+> Status: **APPROVED** (2026-10-17), including amendment A1 (JSON schemas with tsschema sidecars, D62), re-approved the same day; see the end of this file. Amendment A2 (versioning from `0.1.0`, D80) re-approved 2026-10-18; see the end of this file. Editorial corrections: A1's wording updated after D66 moved the config schemas to the CLI package (C2 review F42); the glossary seed term "region class" replaced by "shell (shadow root)" after D89 (C3 planning). No change in scope. Amendment A3 (from C4 planning: the private `-test` package, fixture ignore rules; D104, D109, D107) re-approved 2026-10-18 with the C4 plan; see the end of this file. Note: C3 later adds an eighth package, `-lint` (D88), and C4 a private ninth, `-test` (D104); "7 packages" below refers to C1's own scope (01b K29). Decisions referenced as `D<n>` are in AGENTS.md §3. **Amendment A4 (the representation redesign, `08b-representation-redesign.md`, D160–D200) **approved 2026-10-20** (review `01e-c1-a4-review.md`):** §5 and "Recorded for later chunks": no `ignore: ['/fixtures/']`; §8 the dogfood layout under the representation rules; §9 the layout/glossary wording; §10 trigger rows, single source per fact, the automated checks; §1/§2/§4 `-lint`, the skeleton comment, the entry-file ESLint rule, type tests, extra and opt-in Vitest projects; see "Amendment A4" at the end. **Amendment A5 (the TS template as the source, D203) approved 2026-10-21** (`01g-c1-a5-review.md`): the implementation imports from the template by hand, interactively with the user, and logs the import; see "Amendment A5" at the end.
 
 ## Goal
 
@@ -8,7 +8,12 @@ An empty but fully wired npm-workspaces monorepo. Every later chunk drops code i
 
 C1 adds **no product code**: no contracts, CLI commands, themes or analysis. Those belong to C2 onwards.
 
-**Baseline (D52):** the user's TypeScript project template at `~/projects/ofzza/.templates/ts` is the reference for tooling, conventions and docs. Everything below mirrors it, adapted from a single package to a monorepo. Deviations are called out explicitly.
+**Baseline (D52, D203):** the user's TypeScript project template at `~/projects/ofzza/.templates/ts` (the repo `https://github.com/ofzza/.templates`) is **the source** for tooling, conventions and docs: the user's projects share one lineage. Everything below mirrors it, adapted from a single package to a monorepo. Deviations are called out explicitly; differences this plan doesn't call out yet (listed in `01f-c1-a5-template-notes.md`) are settled with the user during the import and recorded in `TEMPLATE.md`.
+
+**Importing from the template (A5):**
+
+- **First step of the implementation:** copy from the template by hand what suits this repo, file by file. What needs merging or consolidating with what already exists (`AGENTS.md`, `README.md`, `CLAUDE.md`, this plan's adaptations) is done **interactively with the user**. `REQUIREMENT.md` and `.plans/` are never touched. Starting checklist: `.plans/01f-c1-a5-template-notes.md` (the template compared with this plan, incl. differences this plan doesn't call out yet), re-checked against the template's current commit.
+- **The import log, written right after the import:** the template commit used, and per template file whether it was imported as is, merged or changed (with what and why), or left out (and why). It is what later lets anyone diff the template from that commit and consider bringing changes in. It lives in **`TEMPLATE.md`** at the root (TP2), written for humans: which template repository (URL) and template directory, which commit (and date) was used, and what was imported and how, file by file; `AGENTS.md` ("Project") links to it so agents find it, and a trigger row (§10a) covers template changes.
 
 ## Deliverables
 
@@ -40,7 +45,7 @@ scripts/
   readme-samples.mjs           type-checks the ts/tsx code samples in every README (§10)
 .editorconfig  .gitignore  .nvmrc  .prettierrc  .prettierignore
 eslint.config.js  tsconfig.base.json  tsconfig.build.json  tsconfig.json  vitest.config.ts
-package.json  package-lock.json  LICENSE  README.md  CONTRIBUTE.md
+package.json  package-lock.json  LICENSE  README.md  CONTRIBUTE.md  TEMPLATE.md (A5: the template import log)
 AGENTS.md  CLAUDE.md  REQUIREMENT.md  .plans/
 ```
 
@@ -226,7 +231,7 @@ The template's three-way split, adapted:
 
 - **`AGENTS.md`** (agents). §1–§6 keep their role as the process and decision log. It gains the template's agent sections:
   - **Keeping documentation and tests current:** the trigger table, extended for this repo (§10);
-  - **Project:** what tsshowcase is, licence, ESM only, `files` allowlist, "toolchain last verified against" line;
+  - **Project:** what tsshowcase is, licence, ESM only, `files` allowlist, "toolchain last verified against" line, and a link to `TEMPLATE.md` (A5: the template this repo is based on and the import log);
   - **Branching** and **Commits** (the template's text: commit to the current branch, never to `master` or a detached HEAD, propose feature branches, `develop` trunk / `master` stable, no AI attribution);
   - **Layout:** the tree above, what each package is for, and the representation convention (§8, A4);
   - **Commands:** every root script, plus the script wiring rule;
@@ -274,6 +279,7 @@ The template relies on a trigger table and discipline. This repo will have dozen
 | changes a CLI flag, config key or output format         | the CLI reference in the root README and the config schema docs                                                                                              |
 | adds a package                                          | the layout and packages list in AGENTS.md, the root `tsconfig.build.json`, Vitest projects, the dependency table, CONTRIBUTE.md's structure; its own `tsshowcase.config.json` where needed (`skip`, a `scope` override; A4) |
 | changes a fixture                                       | the tests using it and `fixtures/README.md`                                                                                                                  |
+| the TS template (`~/projects/ofzza/.templates/ts`) changes, or more of it is brought in | diff the template from the commit in `TEMPLATE.md`, decide each change with the user, update `TEMPLATE.md` (commit and per-file entries) (A5, D203) |
 | changes a package's public behaviour at all             | a changeset (`npm run changeset`)                                                                                                                            |
 
 **b) Single source per fact.** Each fact is written once and linked from elsewhere, so there are fewer places to update:
@@ -375,6 +381,15 @@ Plan 3 of the redesign's application (`08b-representation-redesign.md` §12, `08
 - **§1, §2, §4:** `-lint` noted in the layout (C3, D88); the skeleton comment ("no exported symbols"); an ESLint rule against `export *` in entry files; `typecheck.include` adds `*.test-d.{ts,tsx}`; extra Vitest projects per package (`unit:<pkg>:<part>`); the `debug` project opt-in through `TSS_VITEST_DEBUG=1` and a `debug` script; acceptance criterion 4 extended.
 - **§8 (from the review):** directory READMEs per directory with exporting files; entry files re-export by name, carry `source` conditions, nothing exporting directly in `src/`; kinds by value (D200); local declarations for public API from dependencies; JSON exporting only when re-exported; `.tsshowcase.jsonc` only, no `directories` entries; the root config's `scope` and `strict`; root documents as home docs.
 - Unchanged: the tooling, CI, fixtures convention (apart from the ignore), versioning, and the C1 deliverables themselves (C1 packages still export nothing).
+
+## Amendment A5: the TS template as the source (D203), approved 2026-10-21
+
+Raised by the user after plan 5 of the redesign's application: make sure the template stays the source and isn't forgotten, so the user's projects share one lineage. The user's direction (`01g-c1-a5-review.md`): no `project` skill; copy by hand what suits, merge and consolidate interactively with the user, and log the import afterwards.
+
+- **Baseline:** the template is "the source"; the import step and the import log in `TEMPLATE.md` (above; TP2).
+- **§1, §9, §10a:** `TEMPLATE.md` in the layout; AGENTS "Project" links to it; a trigger row for template changes.
+- **AGENTS:** D203; D52's status.
+- Unchanged: everything else in this plan; the adopt-or-keep decisions for individual differences (debug variable, test globs, ESLint setup, tsconfig details, …; listed in `01f-c1-a5-template-notes.md`) are made with the user during the import, and the plan text is aligned then.
 
 ## Resolved questions
 

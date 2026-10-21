@@ -1,6 +1,6 @@
 # Chunk plan C15: Vite pipeline helper (`@ofzza/tsshowcase-base-vite`)
 
-> Status: **APPROVED** (round 4, 2026-10-19), together with C2 amendment B8, C3 amendment C3-A2, the C6 amendment and super-plan R9, all applied.
+> Status: **APPROVED** (round 4, 2026-10-19), together with C2 amendment B8, C3 amendment C3-A2, the C6 amendment and super-plan R9, all applied. **Wording from plan 11 (C8 rewrite, `08g-c8-rewrite-review.md`):** "Recorded for later chunks": the C8 G17 item answered (D212); the C10 showcase item reflects the `showcase()` helper (D214).
 >
 > - All open questions are resolved (Q1–Q8: D138–D144).
 > - The pipeline spike (`15a-c15-spike-results.md`) is applied.
@@ -545,13 +545,13 @@ Type-checked (D56).
 ## Recorded for later chunks
 
 - **C6 (amendment, applied):** see "Amendments" below (D145, D148).
-- **C8 (`15d` G17):** whether ambient `declare module` declarations (e.g. `src/client/client.d.ts`) are symbols, and how a declaration-only `exports` subpath (`./client`) fits C1 §8's "entry files only re-export".
+- ✅ **C8 (`15d` G17; answered by D212, plan 11):** ambient declarations are never symbols and a non-module entry yields none, without an issue; C1 §8's re-export rule applies to module entries. Original item: whether ambient `declare module` declarations (e.g. `src/client/client.d.ts`) are symbols, and how a declaration-only `exports` subpath (`./client`) fits C1 §8's "entry files only re-export".
 - **C8:** `-base-react`'s options schema declares `viteConfig` (D138) as a path option (`OPTION_FORMAT.path`, D116). Options are root-only by default (D148): `viteConfig`, `showcaseStylesheets` and `showcaseSetup` stay unmarked (there is no `testRunner` option since D172) (their descriptions say "root config only"), and only genuinely per-package options (e.g. analysis or rule presets) get `"x-tsshowcase-per-package": true`.
 - **C10:**
   - **`ViteApp`:** fill it with plugin-react, React dedupe and resolution, a `prepareData` that drops unread fields but keeps `revision` and `tests`, a `selectDocs` for the docs its layout presents (incl. the `homeDocs` selection, D185), `preludes` from `showcaseStylesheets`/`showcaseSetup`, and `userConfigFile` from `viteConfig`; verify the app works when the user's own plugin-react wins de-duplication (D147);
   - **CSS:** import the module's CSS as `?tss-css` (plain CSS, no `@import`; the `-lint` module preset applies), and re-adopt module CSS on HMR;
   - **Runtime calls:** create the host and call the runtime in the documented order; call `syncDocument` in a layout effect after `data-theme` changes (S6);
-  - **Showcases:** load them through `loadShowcase(file, exportName)` (D195). A showcase file exporting a non-component next to its showcasing components (e.g. a `shell` flag, if C8's format keeps one) isn't a refresh boundary, so edits to it reload the page (S5).
+  - **Showcases:** load them through `loadShowcase(file, exportName)` (D195). Showcasing components are `showcase()` exports whose settings live in the call (D214), so a showcase file needs no non-component export; one that adds one anyway (a helper constant) isn't a refresh boundary, and edits to it reload the page (S5).
   - **Docs:** load the docs a page shows through `loadDoc(id)`, and again after `onData` in `dev`, ignoring `StaleDocError`; take doc ids from the latest data; subscribe to `onData` and `onTestUpdate` in the same tick and apply them (with `applyTestUpdate`) under the one revision; `selectDocs`/`prepareData` may use the analysis `state` (QA).
 - **C11:**
   - passes `cacheDir` per module;

@@ -1,5 +1,7 @@
 # Representation redesign (from C8 planning)
 
+> **APPLIED (2026-10-22): the plans and D160+ are authoritative; this document is kept as design rationale** (08e E6; applied plan by plan, plans 1–11).
+
 > Status: **revision 3.1, APPROVED by the user** (2026-10-20). Revision 1 was approved on 2026-10-19 and reviewed (`08c-redesign-review.md`, decisions X1–X13, clarifications Y1–Y16); revision 2 folded those in and was reviewed by four focused reviewers (`08d-redesign-review.md`, decisions Z1–Z18, clarifications V1–V12); revision 3 folded in everything decided since and was reviewed for clarity and self-sufficiency (`08e-redesign-review.md`, decisions E1–E8, fixes F1–F9). This revision applies E1–E7 and F1–F9; the choices it made beyond them were reviewed one by one with the user (08e, G1–G8, all settled). Nothing here is applied to the approved plans yet; §11 lists every touched decision with its verdict and §12 the affected plans, in application order. Once approved, the decisions are recorded in AGENTS.md (D160+) and the plans revised one by one (§12); after that this document becomes history and the plans and D160+ are authoritative (E6).
 
 ## 0. Principles

@@ -1,6 +1,6 @@
 # Super-plan — tsshowcase v1
 
-> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19); R8 (C7 planning) **re-approved** together with the C7 plan (2026-10-19); R9 (C15 planning) **re-approved** together with the C15 plan (2026-10-19); revision R10 (the representation redesign, plan 10 of its application; review `01h-super-plan-r10-review.md`) **re-approved** (2026-10-21). Decisions referenced as `D<n>` are in AGENTS.md §3.
+> Status: **APPROVED** (after a final consistency review, see `01a-super-plan-review.md`); revision R1 **re-approved** together with the C2 plan (2026-10-18); revision R2 **re-approved** together with the C3 plan (2026-10-18); revision R3 (checkpoint review and prototype spikes) **re-approved** (2026-10-18); revision R4 (review of all plans before wave P3) **re-approved** (2026-10-18); revision R5 (C4 planning) **re-approved** together with the C4 plan (2026-10-18); revision R6 (C6 planning) **re-approved** together with the C6 plan (2026-10-19); revision R7 (C5 planning) **re-approved** together with the C5 plan (2026-10-19); R8 (C7 planning) **re-approved** together with the C7 plan (2026-10-19); R9 (C15 planning) **re-approved** together with the C15 plan (2026-10-19); revision R10 (the representation redesign, plan 10 of its application; review `01h-super-plan-r10-review.md`) **re-approved** (2026-10-21). Decisions referenced as `D<n>` are in AGENTS.md §3. **Wording from plan 11 (the C8 rewrite, `08g-c8-rewrite-review.md`; under the drift rule, `01h`):** the C8 stub replaced by the rewritten plan's goal, requirements and dependencies; C9's `init <path>` and target resolution; duties rows for `RepresentedItem.requires` and the `init` target (C2 B11, D215, D216).
 
 ## Revisions
 
@@ -217,21 +217,27 @@ Each chunk lists **Goal**, **Requirements** and **Depends on**. Each chunk deliv
 ### C8 — React base: Node side (`-base-react`)
 
 - **Goal:** everything `check` and `init` need for React/TS repos, plus the loadable `-module-react-default` class, so that C9 can run `--module react-default` before C10 exists. No bundler involvement (D48).
-- **Requirements:** rewritten on the representation model in plan 11 of the redesign's application (the C8 plan rewrite, then this text); until then: 08b §12 ("C8") and the AGENTS open points for C8.
-- **Depends on:** C2, C4 (fixtures).
+- **Requirements** (plan 11, D211–D218; details in the C8 plan):
+  - **`analyze` → `AnalysisResult`** (D170): TypeScript selection (the repo's own `>=5.0 <7`, else the bundled TS 6, D152); per entry the tsconfig covering it, solution-style configs followed, ambient `.d.ts` files as context (D217); entries from `exports` (patterns expanded, D218) mapped dist → source; symbols attached to their declaring files (D171), namespaces member by member (D211), ambient declarations never symbols (D212), externals and ignored sources skipped; kinds by value with React's components and hooks first, a syntactic fallback without `@types/react` (D200, D213); showcasing components = `showcase()` exports with `title`/`shell` in `meta` (D195, D214); analysis issues incl. `react/showcase-in-build` (D151); `inputs` and plain-data `state`.
+  - **Per-file `verify`** (D177): the showcase format (`react/showcase-empty`, `react/showcase-meta`, `react/showcase-dependency`) and the opt-in `headless` preset (D47, D159).
+  - **`scaffold`** for `init <path>` (D196, D215, D216): stubs by target type from `RepresentedItem.requires` (C2 B11), new items from `WELL_KNOWN_KINDS`, a named re-export in the nearest entry.
+  - **The browser-safe `./showcase` subpath** with `showcase()` and `ShowcaseProps` (D214); the preliminary showcase format, finalised in C10 (D96).
+  - **Options:** per-package `presets`, `entries`, `tsconfig`, `conditions`; root-only `scaffold.kind` and C10's `viteConfig`, `showcaseStylesheets`, `showcaseSetup` (D148); no `testRunner` (D172); `homeDocs` with C10.
+  - **`-test` helpers** for module tests without the CLI; fixtures re-derived.
+- **Depends on:** C2 (incl. amendment B11), C4 (fixtures, `-test`).
 
 ### C9 — CLI shell + `check` + `init`
 
 - **Goal:** the first usable vertical slice: the pipeline's steps 1–7 (D168).
 - **Requirements:**
-  - The command framework (action dispatch) and `--help` rendering from C6's `describeFlags`; global flags (`--module`, `--theme`, `--config`, `--cwd`) are parsed by C6 (D111); action flags (`--format`) and positionals (`init <dir>`) declared in C6's registry.
+  - The command framework (action dispatch) and `--help` rendering from C6's `describeFlags`; global flags (`--module`, `--theme`, `--config`, `--cwd`) are parsed by C6 (D111); action flags (`--format`) and positionals (`init <path>`) declared in C6's registry.
   - **The pipeline, steps 1–7:** scan (C4) → enrichments (directory configs loaded by C6 and merged here, D188; test listing through the runners, D172, one runner at a time, never alongside `analyze`; the module's `analyze`, validated, D170) and kind overrides (D189), exemptions (D191), collections (D190) → associations (D173) → the representation (D178, D179; doc ids, D184; `PathNodeIndex`) → the check (D174) → `verify` per in-scope file (D177) → issues placed (D180), overridden (D176) and printed. Shared with C11.
   - **`check`:**
     - tree report of every in-scope directory and its nodes, with their issues (human-readable, coloured; D165);
     - `--format json` (D60); warnings on stderr, never in the JSON report;
     - non-zero exit code on errors (D16); `--strict=warnings` (D164).
   - **A docs step in `check` (D123, D183):** reserved here, wired to C5's `checkDocs` over every `DocRef` by C5's implementation.
-  - **`init <dir>` (D196):** runs steps 1–4, calls the module's `scaffold` and writes the returned files (C2 §5.10) (and reports clearly when a module lacks it, per D13 feature detection).
+  - **`init <path>` (D196, D215):** resolves and validates the target into a `ScaffoldTarget` (a `RepoPath`; ignored targets and those outside the repo rejected, nonexistent ones also outside every package or out of scope), runs steps 1–4, fills `RepresentedItem.requires` (B11, D216), calls the module's `scaffold` and writes the returned files (C2 §5.10) (and reports clearly when a module lacks it, per D13 feature detection).
   - **Self-check (D41):** this repo's root `tsshowcase.config.json` (`scope: ['src']`, `strict: ['check', 'warnings']`, C1 A4); `tsshowcase check` runs on this repo in CI.
 - **Depends on:** C4, C5 (the docs step's API), C6, C7 (test listing, D194), C8.
 
@@ -362,6 +368,8 @@ The C2 contract implies CLI-side behaviour beyond scanning and loading. Owners (
 | Routes per node via `resolveRoute` (D183) | C11 |
 | `createDocs`: lazy rendering, `assetsOf`, `renderedAssets()` (D187) | C5 |
 | A `DocsAccess` per snapshot; writing the assets of rendered docs only; the `dev` doc-assets directory with every `DocRef`'s assets (D187) | C11 |
+| `RepresentedItem.requires` per item, from the kinds' requirements (`WELL_KNOWN_KINDS` and module `kinds`) minus exemptions (B11, D216) | C9 (shared) |
+| Resolving and validating the `init` target into `ScaffoldTarget` (D215) | C9 |
 | Writing `ScaffoldResult` files (`ifExists`, never overwriting silently, `notes` printed; C2 §5.10, D64, D196) | C9 |
 | Writing `BuildResult.files` (D64): path validation, inclusion checks, output guard, atomic swap, marker file, module files under `tss-assets/` rejected | C11 |
 | `SOURCE_DATE_EPOCH` for `generatedAt` | C11 |
